@@ -24,7 +24,7 @@
  * bind/listen); ftp.c falls back to PASV on its own.
  *
  * Broker policy: connects are restricted to ports 21, 80, 443 and
- * 8080; everything else fails closed.  ASTROUTILS_SANDBOX=NONE makes
+ * 8080; everything else fails closed.  CRAGUTILS_SANDBOX=NONE makes
  * fetch_sandbox_begin() a no-op (fetch_connect goes direct).
  */
 
@@ -263,7 +263,7 @@ fetch_sandbox_connect(const char *host, int port, int af)
 int
 fetch_sandbox_begin(const char *dir)
 {
-	const char *e = getenv("ASTROUTILS_SANDBOX");
+	const char *e = getenv("CRAGUTILS_SANDBOX");
 	const char *tmp;
 	int sp[2];
 	pid_t pid;

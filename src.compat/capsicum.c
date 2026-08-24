@@ -13,7 +13,7 @@
  *
  * Enforcement is required by default: if the kernel lacks Landlock or
  * seccomp, caph_enter() fails and the calling tool exits visibly via
- * its err(1) path.  Setting ASTROUTILS_SANDBOX=NONE in the environment
+ * its err(1) path.  Setting CRAGUTILS_SANDBOX=NONE in the environment
  * restores the historical no-op stub behavior.
  *
  * Known limitations (compared to real Capsicum):
@@ -59,7 +59,7 @@
 static int
 sandbox_disabled(void)
 {
-	const char *e = getenv("ASTROUTILS_SANDBOX");
+	const char *e = getenv("CRAGUTILS_SANDBOX");
 
 	return e != NULL && strcmp(e, "NONE") == 0;
 }

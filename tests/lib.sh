@@ -55,7 +55,7 @@ xfail() {
     return 0
 }
 
-# is_musl — true when the C library is musl (Alpine, Chimera, Astro).
+# is_musl — true when the C library is musl (Alpine, Chimera, Crag).
 is_musl() {
     if [ -n "${CU_IS_MUSL:-}" ]; then
         [ "$CU_IS_MUSL" = "1" ]

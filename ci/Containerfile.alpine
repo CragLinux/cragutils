@@ -1,6 +1,6 @@
 # musl build environment.
 #
-# Astro ships musl, so this is the configuration that actually matters for
+# Crag ships musl, so this is the configuration that actually matters for
 # the product; the glibc image exists because the analyzers and sanitizer
 # tooling are better supported there.
 #

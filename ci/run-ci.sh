@@ -4,7 +4,7 @@
 #
 # Runs the same job scripts that GitHub Actions runs, in podman containers
 # built from ci/Containerfile.*, so a full CI pass can be reproduced on a
-# laptop before pushing.  This mirrors Astro's build philosophy: the
+# laptop before pushing.  This mirrors Crag's build philosophy: the
 # pipeline is a thin wrapper around scripts that work locally.
 #
 # Usage:

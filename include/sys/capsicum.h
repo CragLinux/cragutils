@@ -35,7 +35,7 @@
  * Capsicum compatibility for Linux: implemented on top of Landlock
  * (filesystem namespace) and seccomp-BPF (everything else) in
  * src.compat/capsicum.c.  Enforcement is required by default; set
- * ASTROUTILS_SANDBOX=NONE in the environment to fall back to the
+ * CRAGUTILS_SANDBOX=NONE in the environment to fall back to the
  * historical no-op stub behavior.
  *
  * The rights are a bitmask; only the names used in this tree are

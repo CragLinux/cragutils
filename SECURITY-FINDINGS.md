@@ -1,4 +1,4 @@
-# Security findings — astroutils
+# Security findings — cragutils
 
 Work queue for the hardening effort. Sources:
 
@@ -788,7 +788,7 @@ verbatim in freebsd-src main unless noted):
   consumer (nvi uses recno, tip uses hash) — latent library code.
   upstream-patches/0059 (cherry-pick).
 - tsort hash chunk/element callocs unchecked → NULL deref on OOM
-  (astroutils-local hash; local fix, not upstreamable).
+  (cragutils-local hash; local fix, not upstreamable).
 
 FIXED — leaks and OOM hygiene (long-lived tools prioritized; all
 still upstream unless noted): nvi error-path leaks (msgq_status,
@@ -840,7 +840,7 @@ FIXED:
 - patch `plan_a()` stat→open race (`inp.c:186`): a swapped-in
   non-regular or truncated input file bypassed the `S_ISREG`/size
   checks — in-tree hang or mmap-past-EOF SIGBUS even with the sandbox
-  on; a cross-boundary read only with `ASTROUTILS_SANDBOX=NONE` plus a
+  on; a cross-boundary read only with `CRAGUTILS_SANDBOX=NONE` plus a
   privileged invoker. Fixed with an fstat-after-open dev/ino/type
   check; the mapping is sized from the opened fd. Verbatim upstream.
   upstream-patches/0067 (SO-routed with the other patch(1) material).
@@ -1006,7 +1006,7 @@ LOW / ACCEPTED (race exists, no boundary crossed):
   per-fd rights via seccomp argument filters, consolidated into one
   filter per type at enter time.  Enforcement is required — if the
   kernel lacks Landlock/seccomp the tools fail at startup; set
-  `ASTROUTILS_SANDBOX=NONE` to fall back to the no-op stub.  See the
+  `CRAGUTILS_SANDBOX=NONE` to fall back to the no-op stub.  See the
   header comment in `src.compat/capsicum.c` for the known limitations
   (fd-number-keyed rights, in-process casper stubs).
 - Compiler hardening (both builds, default on): `-fstack-protector-strong`,

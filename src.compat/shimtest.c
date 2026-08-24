@@ -4,7 +4,7 @@
  * shimtest — exercise the capsicum shim (src.compat/capsicum.c).
  *
  * Default mode (enforced): per-fd limits and the namespace lockdown
- * must take effect.  With ASTROUTILS_SANDBOX=NONE the shim is a no-op
+ * must take effect.  With CRAGUTILS_SANDBOX=NONE the shim is a no-op
  * and every probe must succeed instead; pass "stub" as argv[1] to
  * assert that direction.  Pass "casper" to test the read-only
  * casper mode instead of the full lockdown.
@@ -48,7 +48,7 @@ main(int argc, char *argv[])
 {
 	int stub = argc > 1 && strcmp(argv[1], "stub") == 0;
 	int casper = argc > 1 && strcmp(argv[1], "casper") == 0;
-	const char *sbx = getenv("ASTROUTILS_SANDBOX");
+	const char *sbx = getenv("CRAGUTILS_SANDBOX");
 
 	/* the test runner sets the escape hatch on sandbox-less runtimes */
 	if (sbx != NULL && strcmp(sbx, "NONE") == 0)

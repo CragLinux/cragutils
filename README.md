@@ -1,8 +1,11 @@
-# astroutils
+# cragutils
 
-Astroutils is a hardened fork of Chimera Linux's core userland
+Cragutils is a hardened fork of Chimera Linux's core userland
 ([chimerautils](https://github.com/chimera-linux/chimerautils)). It
 consists of the following:
+
+Lineage: chimerautils → astroutils → cragutils — the fork was renamed
+in step with its parent distro's rename from Astro to Crag Linux.
 
 * Ports of FreeBSD tools
 * An internal library providing a compat interface to simplify porting
@@ -45,7 +48,7 @@ The following ports are experimental:
 
 * su
 
-In a way, `astroutils` is also an alternative to projects like Busybox.
+In a way, `cragutils` is also an alternative to projects like Busybox.
 
 ## bsdutils
 
@@ -55,7 +58,7 @@ complete package that prioritizes Chimera's needs and development pace.
 
 ## Building
 
-Astroutils requires a Linux system with a Clang or GCC compiler.
+Cragutils requires a Linux system with a Clang or GCC compiler.
 
 You will also need the following:
 
@@ -110,7 +113,7 @@ applies a full Landlock + seccomp lockdown (no new filesystem access,
 no exec, no sockets), and `caph_enter_casper()` a read-only filesystem
 mode, mirroring what casper brokers on FreeBSD. This requires a kernel
 with Landlock and seccomp (5.13+); without them the tools fail at
-startup by design. Set `ASTROUTILS_SANDBOX=NONE` in the environment to
+startup by design. Set `CRAGUTILS_SANDBOX=NONE` in the environment to
 disable enforcement and restore the previous no-op behavior.
 
 ## Importing a new FreeBSD release

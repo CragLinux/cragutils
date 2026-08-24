@@ -1,10 +1,10 @@
-# Hardening plan — astroutils (Astro fork)
+# Hardening plan — cragutils (Crag fork)
 
 Forward work queue for the security and robustness effort. Companion to
 `SECURITY-FINDINGS.md`, which records what has already been found and
 fixed; this file records what is *next* and why.
 
-Context: this fork feeds [Astro](../Astro), an embedded appliance distro
+Context: this fork feeds [Crag](../Astro), an embedded appliance distro
 (musl, aarch64 + x86_64, read-only rootfs, network-facing update and
 config daemons). Priorities below are ordered for that threat model —
 untrusted input arrives over the network and from files on `/data`, and
@@ -46,7 +46,7 @@ any of them, and every later item on this list needs somewhere to run.
       observable from the command line — this is the load-bearing part.
 - [x] Fuzz regression: replay `fuzz/corpus/` and past crash artifacts as
       a fixed corpus, non-generative, on each run.
-- [x] `ci/` — podman-based local-first pipeline (matches Astro's build
+- [x] `ci/` — podman-based local-first pipeline (matches Crag's build
       philosophy): the same scripts run locally and in GitHub Actions.
 - [x] CI jobs: glibc+gcc, glibc+clang, musl (Alpine), ASan+UBSan test
       run, fuzz regression, hardening-flag verification.
@@ -101,7 +101,7 @@ genuine post-open privilege dropping with no per-tool patching.
       (write(1)'s /dev fd).
 - [x] Failure mode: enforcement is **required by default** — if the
       kernel lacks Landlock/seccomp, caph_enter() fails and tools exit
-      via their err(1) path.  `ASTROUTILS_SANDBOX=NONE` restores the
+      via their err(1) path.  `CRAGUTILS_SANDBOX=NONE` restores the
       no-op stub behavior.
 - [x] Call-site audit: all 33 sandboxed tools traced for post-enter fs
       access; none need writes.  One tool needed a tweak: logname's
@@ -206,7 +206,7 @@ against *exploitation*; several standard mitigations are missing.
 
 ## P4 — musl and aarch64 validation — DONE
 
-**Why:** Astro is musl-based and ships on aarch64; this work has run on
+**Why:** Crag is musl-based and ships on aarch64; this work has run on
 glibc/x86_64. Locale, regex and `getopt` differences will surface bugs —
 the jot format bug was exactly that class. aarch64's unsigned-by-default
 `char` interacts directly with the signed-char bug class already fixed
@@ -230,7 +230,7 @@ in unvis.
       suite passes on both arches (aarch64: all green; armv7 exposed
       only a 32-bit-`LINENUM` test assumption, fixed).  Skipped tools
       (sort, nvi, fetch, telnet, …) need a cross sysroot for
-      crypto/ncurses/xo — revisit if Astro wants full-tool cross builds.
+      crypto/ncurses/xo — revisit if Crag wants full-tool cross builds.
 - [x] Re-run sanitizers cross-arch — DONE: both arches built with
       `-Dprod-sanitize=true` (trap-mode bounds/object-size) on top of
       ReleaseSafe UB checks; full suite including corpus replay passes
@@ -302,11 +302,11 @@ patch on a mailing list.
       normal FreeBSD review process.
 - [ ] Notify Chimera Linux — they ship this code today.
 
-## P8 — Attack-surface reduction in the Astro image
+## P8 — Attack-surface reduction in the Crag image
 
 **Why:** the cheapest hardening is not shipping the tool.
 
-- [ ] Explicit ship / don't-ship decision, recorded in Astro's docs, for
+- [ ] Explicit ship / don't-ship decision, recorded in Crag's docs, for
       `telnet`, `tip`/`cu`, `ee`, `nvi`, and the experimental `su`.
 - [ ] If `su` ships: dedicated audit. It is the only setuid binary in
       the set — environment scrubbing, tty handling, signal handling,
@@ -318,10 +318,10 @@ patch on a mailing list.
 
 **Why:** the jot bug is a class the analyzers cannot see — the port
 behaving differently from both upstream FreeBSD and GNU. This is
-robustness rather than security, but it is what protects Astro from
+robustness rather than security, but it is what protects Crag from
 subtle script breakage after an import.
 
-- [ ] Harness driving identical invocations through astroutils, GNU
+- [ ] Harness driving identical invocations through cragutils, GNU
       coreutils and toybox; diff stdout/stderr/exit status.
 - [ ] Run it against FreeBSD binaries too, to separate "port bug" from
       "BSD/GNU difference" (the latter belongs in `TRADEOFFS`).

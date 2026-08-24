@@ -1,6 +1,6 @@
 #!/bin/sh
 # Sandbox (capsicum shim) tests.  The shim is Landlock + seccomp-BPF;
-# enforcement is required by default, ASTROUTILS_SANDBOX=NONE disables.
+# enforcement is required by default, CRAGUTILS_SANDBOX=NONE disables.
 
 . "$CU_LIB/lib.sh"
 
@@ -23,8 +23,8 @@ if require "shimtest" shimtest; then
     [ $? -eq 77 ] && sandbox_available=0
     run_shimtest "shimtest: casper read-only mode enforced" \
         "$(tool shimtest)" casper
-    run_shimtest "shimtest: ASTROUTILS_SANDBOX=NONE disables" \
-        env ASTROUTILS_SANDBOX=NONE "$(tool shimtest)" stub
+    run_shimtest "shimtest: CRAGUTILS_SANDBOX=NONE disables" \
+        env CRAGUTILS_SANDBOX=NONE "$(tool shimtest)" stub
 fi
 
 group "capsicum shim: sandboxed tools still work"
@@ -81,15 +81,15 @@ group "capsicum shim: escape hatch"
 # With NONE the sandbox is a no-op; a named-file read via the casper
 # tools must work identically.
 if have cat; then
-    assert_out "ASTROUTILS_SANDBOX=NONE keeps stub behavior" "alpha
-beta" env ASTROUTILS_SANDBOX=NONE "$(tool cat)" input.txt
+    assert_out "CRAGUTILS_SANDBOX=NONE keeps stub behavior" "alpha
+beta" env CRAGUTILS_SANDBOX=NONE "$(tool cat)" input.txt
 fi
 
 group "capsicum shim: patch(1) path-scoped mode"
 
 enforced=1
 [ "$sandbox_available" = 0 ] && enforced=0
-[ "${ASTROUTILS_SANDBOX:-}" = "NONE" ] && enforced=0
+[ "${CRAGUTILS_SANDBOX:-}" = "NONE" ] && enforced=0
 
 if [ "$enforced" = 0 ]; then
     skip "patch path-scoped mode" "sandbox not enforcing on this runtime"

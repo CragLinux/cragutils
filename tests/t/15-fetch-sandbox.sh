@@ -13,7 +13,7 @@ if have shimtest; then
     "$(tool shimtest)" >/dev/null 2>&1
     [ $? -eq 77 ] && sandbox_available=0
 fi
-[ "${ASTROUTILS_SANDBOX:-}" = "NONE" ] && sandbox_available=0
+[ "${CRAGUTILS_SANDBOX:-}" = "NONE" ] && sandbox_available=0
 
 if [ "$sandbox_available" = 0 ]; then
     skip "libfetch sandbox" "sandbox not enforcing on this runtime"
@@ -133,9 +133,9 @@ fi
 
 group "libfetch sandbox: escape hatch"
 
-assert_out "ASTROUTILS_SANDBOX=NONE goes direct" \
+assert_out "CRAGUTILS_SANDBOX=NONE goes direct" \
     "fetch-sandbox-fixture" \
-    env ASTROUTILS_SANDBOX=NONE "$(tool fetch)" -q -o /dev/stdout \
+    env CRAGUTILS_SANDBOX=NONE "$(tool fetch)" -q -o /dev/stdout \
     http://127.0.0.1:$http_port/real.txt
 
 cu_finish

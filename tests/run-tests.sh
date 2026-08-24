@@ -157,13 +157,13 @@ export CU_TIMEOUT=$timeout_s
 # sandboxed tools fail by design there.  Detect that once via shimtest
 # and run the suite in stub mode instead; 14-sandbox.sh still records
 # the skips, and the notice below keeps it honest.
-if [ -z "${ASTROUTILS_SANDBOX:-}" ] && [ -x "$CU_BIN/shimtest" ]; then
+if [ -z "${CRAGUTILS_SANDBOX:-}" ] && [ -x "$CU_BIN/shimtest" ]; then
     ( cd "$work_root" && "$CU_BIN/shimtest" ) >/dev/null 2>&1
     _rc=$?
     if [ "$_rc" -eq 77 ]; then
-        printf 'run-tests.sh: sandbox unavailable on this runtime; testing tools with ASTROUTILS_SANDBOX=NONE\n' >&2
-        ASTROUTILS_SANDBOX=NONE
-        export ASTROUTILS_SANDBOX
+        printf 'run-tests.sh: sandbox unavailable on this runtime; testing tools with CRAGUTILS_SANDBOX=NONE\n' >&2
+        CRAGUTILS_SANDBOX=NONE
+        export CRAGUTILS_SANDBOX
     fi
 fi
 

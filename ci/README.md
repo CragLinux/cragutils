@@ -4,7 +4,7 @@ Local-first pipeline. The jobs are plain shell scripts in `ci/jobs/`;
 `ci/run-ci.sh` runs them in podman containers so a full CI pass can be
 reproduced on a laptop, and `.github/workflows/ci.yml` runs the *same*
 scripts in GitHub Actions. Nothing in the pipeline exists only on the
-server, which follows Astro's containerized, reproducible-build approach.
+server, which follows Crag's containerized, reproducible-build approach.
 
 ## Running locally
 
@@ -27,7 +27,7 @@ they are cached by podman.
 |---|---|
 | `gcc` | glibc build with gcc, then the functional suite |
 | `clang` | glibc build with clang, then the functional suite |
-| `musl` | Alpine/musl build and suite — the configuration Astro ships |
+| `musl` | Alpine/musl build and suite — the configuration Crag ships |
 | `sanitizers` | ASan+UBSan build, full suite **and** full corpus replay |
 | `fuzz` | builds the libFuzzer harnesses, replays every corpus |
 | `msan` | MemorySanitizer build of the harnesses + corpus replay |

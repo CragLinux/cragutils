@@ -34,7 +34,7 @@
 /*
  * Real implementations live in src.compat/capsicum.c (Landlock +
  * seccomp-BPF).  Enforcement is required by default; set
- * ASTROUTILS_SANDBOX=NONE to fall back to no-op stub behavior.
+ * CRAGUTILS_SANDBOX=NONE to fall back to no-op stub behavior.
  */
 
 #include <fcntl.h>

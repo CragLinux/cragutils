@@ -156,7 +156,7 @@ require_all "BIND_NOW" "$n_now" "$no_now"
 # the behavioral suite cannot tell the shim apart from the stub.  Skip
 # when the escape hatch is set; report TODO (not FAIL) when the runtime
 # lacks Landlock/seccomp (the tool then exits immediately).
-if [ -z "${ASTROUTILS_SANDBOX:-}" ]; then
+if [ -z "${CRAGUTILS_SANDBOX:-}" ]; then
     sb_bin=$(printf '%s\n' $bins | grep '/yes$' | head -1)
     if [ -n "$sb_bin" ]; then
         "$sb_bin" >/dev/null 2>&1 &
