@@ -4,9 +4,6 @@ Cragutils is a hardened fork of Chimera Linux's core userland
 ([chimerautils](https://github.com/chimera-linux/chimerautils)). It
 consists of the following:
 
-Lineage: chimerautils → astroutils → cragutils — the fork was renamed
-in step with its parent distro's rename from Astro to Crag Linux.
-
 * Ports of FreeBSD tools
 * An internal library providing a compat interface to simplify porting
 * Custom-made new tools
