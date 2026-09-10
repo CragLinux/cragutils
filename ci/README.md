@@ -97,8 +97,8 @@ ci/upstream-check.sh --freebsd-mode api   # use the API, no local cache
 The FreeBSD section does not use the API by default — ~135 watched
 paths would need ~135 requests against the unauthenticated 60/hour
 limit. Instead it keeps a blobless partial clone at
-`$XDG_CACHE_HOME/astroutils/freebsd-src.git` (default
-`~/.cache/astroutils/freebsd-src.git`, outside the repo): full
+`$XDG_CACHE_HOME/cragutils/freebsd-src.git` (default
+`~/.cache/cragutils/freebsd-src.git`, outside the repo): full
 commit/tree history, blobs on demand. The first run does a one-time
 clone of ~700 MB (progress on stderr); after that a nightly run is a
 tiny `git fetch` plus local `git log` queries — a couple of seconds,

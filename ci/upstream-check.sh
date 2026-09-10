@@ -21,7 +21,7 @@
 # (ISO dates).  If absent, the window defaults to the last 7 days.
 #
 # FreeBSD mode: the default "git" mode keeps a blobless partial clone at
-# $XDG_CACHE_HOME/astroutils/freebsd-src.git (default ~/.cache/...) —
+# $XDG_CACHE_HOME/cragutils/freebsd-src.git (default ~/.cache/...) —
 # full commit/tree history, blobs on demand.  The first run clones it
 # (one-time download, ~700 MB on disk, progress on stderr); later
 # runs fetch a tiny increment and query locally, so there are no rate
@@ -43,7 +43,7 @@ do_chimera=1
 do_freebsd=1
 freebsd_mode=git
 freebsd_repo=https://github.com/freebsd/freebsd-src.git
-cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/astroutils/freebsd-src.git
+cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/cragutils/freebsd-src.git
 
 while [ $# -gt 0 ]; do
     case $1 in
