@@ -1,8 +1,15 @@
-# Upstream patch candidates
+# Patch series (local delta record)
 
 Bug fixes found during the static-analysis/fuzzing hardening pass
 (see SECURITY-FINDINGS.md in the repo root). Generated with
 `git format-patch`; apply with `git am` in order.
+
+Status 2026-09: this series began as upstream patch candidates. The
+submission track is dropped — the FreeBSD Security Officer never
+responded to the coordinated report, and Chimera Linux does not accept
+AI-assisted contributions. The series stays as the local patch queue
+and delta record for this fork; the fixes are public here and upstream
+can take them if they ever want them.
 
 - 0001 counted_by: hardening annotation (buffer/count pairs in libfetch
   and nvi); optional but recommended — enables -fsanitize=bounds checks.
@@ -223,7 +230,7 @@ Bug fixes found during the static-analysis/fuzzing hardening pass
 - 0037 sort: memcpy(dst, NULL, 0) in radixsort run_sort_level_next, both
   branches — fires on an ordinary three-line sort (UBSan).
 
-Notes for upstream:
+Notes (originally for upstream submission):
 - 0001 introduces __cu_counted_by in include/sys/cdefs.h; 0036 corrects
   its feature test. Squash them if 0001 has not been applied yet.
 - 0035 was reported to the Security Officer together with the earlier

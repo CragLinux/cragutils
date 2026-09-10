@@ -24,7 +24,8 @@ Done so far (see `SECURITY-FINDINGS.md` for detail):
   genuine severity: patch(1) stale-`p_len` OOB write from a malicious
   diff, patch(1) 16 GB memory-exhaustion DoS from an 89-byte input, and
   nvi CONVERT2 unbounded-growth/UAF on iconv buffer growth.
-- 60-patch upstream-submittable series in `upstream-patches/`.
+- 73-patch series in `upstream-patches/` (local delta record; the
+  upstream-submission track was dropped in 2026-09 — see P7).
 - Baseline compiler hardening in both build systems.
 - Four libFuzzer harnesses over untrusted-input parsers.
 
@@ -286,24 +287,24 @@ exposure, per the approach already recorded in `SECURITY-FINDINGS.md`.
       (`-fanalyzer`, Infer, scan-build re-run; deltas in
       `SECURITY-FINDINGS.md`).
 
-## P7 — Coordinated disclosure
+## P7 — Coordinated disclosure — CLOSED (upstream unreachable)
 
 **Why:** the patch(1) findings are attacker-controlled OOB writes from a
 malicious diff, present verbatim upstream, and `pch.c` shares lineage
-with OpenBSD and NetBSD. These want a security-officer report, not a
+with OpenBSD and NetBSD. These wanted a security-officer report, not a
 patch on a mailing list.
 
 - [x] Report to the FreeBSD Security Officer: patch(1) stale-`p_len` OOB
       write, patch(1) unbounded `hunkmax` DoS, nvi CONVERT2, nvi
       `re_conv` heap overflow. Request CVEs. — sent 2026-08; no reply
-      after repeated waits, thread closed 2026-09. The findings and
-      fixes are public in this repo, so the remaining items below
-      proceed through normal public channels when scheduled.
-- [ ] Check OpenBSD/NetBSD `patch(1)` for the same defects; notify if
-      present.
-- [ ] Submit the remaining series (`upstream-patches/`) through the
-      normal FreeBSD review process.
-- [ ] Notify Chimera Linux — they ship this code today.
+      after repeated waits, thread closed 2026-09.
+- [x] Submission track dropped 2026-09: FreeBSD never responded, and
+      Chimera Linux does not accept AI-assisted contributions, which
+      describes this entire effort. The findings and fixes are public in
+      this repo — upstream can take them if they ever want them. No
+      OpenBSD/NetBSD notification, no FreeBSD review submission, no
+      Chimera notification. `upstream-patches/` stays as our local patch
+      queue and delta record, not a submission series.
 
 ## P8 — Attack-surface reduction in the Crag image
 
@@ -336,6 +337,6 @@ subtle script breakage after an import.
 P0 and P3 are largely mechanical and unblock everything else — CI gives
 every later item somewhere to run, and the mitigation flags are a
 one-time build change. P1 is the most interesting engineering and the
-biggest differentiator for an appliance OS. P7 has a clock on it: those
-patch(1) defects are sitting exploitable in three upstream BSDs right
-now.
+biggest differentiator for an appliance OS. P7 ran its course: the SO
+report went out, upstream chose not to engage, and the fixes speak for
+themselves in this repo.
