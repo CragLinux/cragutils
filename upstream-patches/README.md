@@ -71,7 +71,11 @@ can take them if they ever want them.
   last line — traps on loading an all-empty-lines file (UBSan).
 - 0034 compat: mktemp _gettemp indexed padchar with sizeof including
   the NUL — planted '\0' in templates, 1-byte global over-read on the
-  EEXIST carry path (ASan).
+  EEXIST carry path (ASan). Upstreamed independently as chimerautils
+  d5d1eeccf7b8 (2026-10-15), which also casts the index to
+  `unsigned char` (a negative char made the modulo negative on
+  signed-char platforms); that cast is imported back, so the tree now
+  matches upstream's fix exactly.
 - 0038 compat: fold musl surrogate-escape decodes (U+DF80..U+DFFF) back
   to raw bytes in vis — every byte ≥ 0x80 was double-encoded on musl,
   corrupting vis|unvis round-trips (data-integrity bug; musl-only

@@ -294,7 +294,9 @@ empty line — trapped on loading an all-empty-lines file; and
 `compat/mktemp.c` `_gettemp()` indexed `padchar` with `sizeof`
 including the NUL, planting `'\0'` in templates and causing a 1-byte
 global over-read on the EEXIST carry path — ASan-verified, fixed with
-`% (sizeof(padchar) - 1)` matching upstream libc.)
+`% (sizeof(padchar) - 1)` matching upstream libc.) The mktemp fix was
+independently taken by chimerautils (d5d1eeccf7b8, 2026-10-15), with
+an added `(unsigned char)` index cast imported back here.
 
 ### Cross-analyzer agreement — RESOLVED
 The clusters reported by BOTH infer and scan-build are all closed:
