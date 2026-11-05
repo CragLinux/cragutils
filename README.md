@@ -85,7 +85,7 @@ sources with zig's bundled clang/LLVM and produces the same default tool
 set as the meson build (minus man pages and install-time renames/symlinks,
 which are not yet implemented).
 
-Requirements: `zig` (developed against 0.17.0-dev), `byacc`, `flex`, and
+Requirements: `zig` (developed against 0.17.1), `byacc`, `flex`, and
 `pkg-config` for dependency probing.
 
 ```
