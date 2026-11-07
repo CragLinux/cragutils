@@ -286,6 +286,15 @@ exposure, per the approach already recorded in `SECURITY-FINDINGS.md`.
 - [x] Re-run all analyzers after P0–P3 land; record the deltas
       (`-fanalyzer`, Infer, scan-build re-run; deltas in
       `SECURITY-FINDINGS.md`).
+- [x] Static-analysis refresh (2026-11) + permanent gate: gcc
+      `-fanalyzer`, scan-build and clang-tidy re-run on the current
+      tree; every new cluster triaged (gencat `$delset` double free
+      fixed with regression tests, plus ul/col/od/tr/script/uudecode/
+      ee/printf fixes — see SECURITY-FINDINGS.md "Static analysis
+      refresh"). New `static` CI job (`ci/jobs/static.sh`) gates every
+      pass on new `checker file` signatures against
+      `ci/static-baseline/`; run it and tighten the baseline whenever
+      a fix removes findings.
 
 ## P7 — Coordinated disclosure — CLOSED (upstream unreachable)
 

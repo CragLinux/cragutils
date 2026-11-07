@@ -997,6 +997,131 @@ LOW / ACCEPTED (race exists, no boundary crossed):
   (`fetch.c:884`): rename never writes through a destination symlink —
   a planted link is atomically replaced, not followed.
 
+## Static analysis refresh (2026-11) and the permanent `static` CI gate
+
+Re-ran the analyzer set on the current tree and triaged everything not
+already covered by the verdicts above. Deltas vs. the recorded
+baselines: gcc `-fanalyzer` 223 warnings → 155 (75 `checker file`
+signatures), scan-build 560 reports → 238 (141 signatures), plus a
+first clang-tidy pass (`clang-analyzer-*,bugprone-*,cert-*,security-*`
+over all 495 C TUs: 5697 warnings, 534 in the analyzer/security subset
+— a style-noise profile dominated by `bugprone-assignment-in-if` (1836,
+the BSD `if ((c = getopt(...)) != -1)` idiom) and
+`bugprone-narrowing-conversions` (1096); its analyzer subset maps
+one-to-one onto the clusters triaged here). All of the new clusters
+below had no recorded verdict before this pass.
+
+FIXED (real defects, all new):
+
+- gencat `MCDelSet()` double free — **verified live**: a message file
+  with `$delset` on a set holding any message aborted with `free():
+  double free detected in tcache 2` (SIGABRT). The drain loop freed
+  `msg->str` and unlinked `msg` but never advanced or freed the node,
+  so the first node's string was freed twice; the `_msgT` and `_setT`
+  nodes leaked and `curSet` was left dangling at the deleted set.
+  Fixed: canonical re-fetch-head drain, node/set frees, `curSet` cleared
+  when the deleted set is current. Regression tests in
+  `tests/t/12-regress-tools.sh` (delset with one/many messages, delset
+  of the current set + id reuse, message without a set exits 1).
+- gencat `getmsg()` analyzer-visibility hardening (no behavior change
+  on reachable input): private `error()` was not noreturn (same class as
+  the P6 `__dead2` sweep — gencat's own static `error()` missed it),
+  which let 13 null-dereference reports model execution continuing past
+  `error("premature end of file")`; annotated `__noreturn__`. The
+  scratch-buffer statics also needed `msg == NULL` in the growth check
+  and unsigned `clen`/`msglen` (with a `clen == 0` wrap guard) before
+  the analyzer would stop exploring a failed-allocation state that
+  cannot occur (`strlen() + 1 >= 1`). gencat's analyzer profile went
+  17 → 4 warnings (residuals are the queue-macro and post-`warning()`
+  FP families below).
+- ul(1) `mput()`/`iattr()` trailing-trim loop (`for (*cp=' '; *cp==' ';
+  cp--) *cp = 0;`) walked below `lbuf` on an empty or all-space line:
+  stack under-read on every empty line, and stack under-*write* while
+  the bytes below `lbuf` happened to be spaces. Both loops now stop at
+  `lbuf`. Not observable from the command line (only under a sanitizer
+  or lucky stack contents), so no CLI regression test.
+- col(1) sort path: `memset(count, 0, sizeof(int) * l->l_max_col + 1)`
+  zeroed `4n+1` bytes instead of `4(n+1)` — the `count[max_col]` slot
+  (always used: `l_max_col` is by construction some character's column)
+  kept 3 uninitialized bytes, and the garbage accumulated into the
+  `sorted[]` write indexes — a heap OOB write on unlucky heap contents.
+  Fixed to `sizeof(int) * (size_t)(l->l_max_col + 1)`. Not
+  deterministically observable; the MSan job covers the class.
+- od(1) `odsyntax.c`: `n = (1ULL << (8 * isize)) - 1` is shift UB at
+  `isize == 8` (`od -t x8` and friends — shift count 64); guarded for
+  the 8-byte case. tr(1) `genrange()` sized its malloc with `sizeof(int)`
+  for a `wint_t *` (equal on Linux, wrong by construction) — now
+  `sizeof(*s->set)`.
+- script(1) `doshell()`: `shell` came from `getenv("SHELL")` and was
+  passed to `execl()` *after* `setenv("SCRIPT", ...)` — POSIX allows
+  setenv() to invalidate earlier getenv() pointers (cert-env33; musl is
+  the Crag target). The getenv() now runs after the setenv().
+- uudecode `decode2()`: the global `outfile` pointed into the function's
+  stack `buf` (clang-tidy `core.StackAddressEscape`) and dangled across
+  the multi-file `decode()` loop and later error paths; `buf` is now
+  static. Same fix in ee(1) `ispell_op()`: global `tmp_file` pointed at
+  the stack `template` buffer and was read by the `recv_file` paths
+  after return; `template` is now static.
+- printf(1) `getint()`: on an out-of-range numeric argument, the
+  `warnx("%s: %s", *gargv, ...)` message dereferenced `*gargv` past the
+  last argument (NULL when the bad number was the final one) — a glibc
+  "(null)" print but a musl `%s`-NULL hazard on a user-visible error
+  path. Now guarded.
+
+FALSE POSITIVE / covered by recorded families (new instances, no code
+change):
+
+- gcc `setmode.c` mismatching-deallocation ×5: the analyzer books
+  `reallocarray()` as a foreign deallocator of the `malloc`'d set
+  (CWE-762 framing). realloc-family on malloc memory is not a
+  mismatch; the setmode fuzz target runs clean over the same paths.
+- gcc `fmt.c` `xrealloc` "double-free": errx(1) is noreturn and
+  realloc-failure does not free; analyzer modeling.
+- tail `read.c` under-read/uninit at the reverse-scan (`*t`): the
+  flagged paths need `p - 1 >= sp` and `p == sp` simultaneously
+  (relational loss), and the scanned ranges are exactly what the read
+  loop wrote; `off == 0` cannot reach `bytes()` (`reverse()` returns
+  early). `tail/read.c` and `whereis`/`envopts`/`md5`/`echo`/`csplit`/
+  `xinstall`/`zopen`/`logger` leak reports are error-path or
+  exit-path leaks of short-lived tools — the documented-not-fixed
+  policy above.
+- `sort/file.c` pclose/fclose "mismatch" + file leaks: the recorded
+  stream-identity / "fopen/pclose ternaries" FP family — `f` is popen'd
+  exactly when `file_is_tmp(fn) && compress_program`, re-tested at
+  close.
+- `pr.c` garbage/uninit cluster (8), `sort.c` `sym_*` "uninit",
+  `sh/eval.c`/`jobs.c`/`histedit.c`, `xargs.c`, `netcat.c`, `df.c` /
+  `truncate.c` divide-by-zero, `tip/getcap.c` `cgetmatch` under-read,
+  `ed/main.c:1350`, `nvi` `exf.c`/`ex_write.c`/`util.h`, awk
+  `run.c`/`tran.c`/generated `awkgram.tab.c`, `getdate.c`, `gzip`/
+  `unlz.c`, `find/function.c`, `expr.c`, `date.c`/`timeout.c`/`md5.c`
+  `-Wmaybe-uninitialized`: same recorded FP families — tandem
+  invariant/arithmetic-relation loss, the awk `FATAL`/C99-noreturn
+  family, the nvi GET_SPACE/`cols`-clamp families (PoC-verified fixes
+  intact), localeconv-string and `conv_mbtowc` out-param contracts
+  (sort), fts_read-loop invariants (find), and kernel-guaranteed
+  `f_bsize != 0` (df). `sort/file.c`'s pclose-ternary is the recorded
+  family verbatim.
+- scan-build queue-macro reports on the new `MCDelSet` drain (UAF after
+  `free(msg)`): the recorded "loses the head update through the
+  `le_prev` indirection" family — the canonical drain idiom; verified
+  correct by hand and by the regression tests under ASan-free glibc
+  (the pre-fix double free aborted, the post-fix loop passes).
+- clang-tidy `bugprone-not-null-terminated-result` (m4 `look.c`, ncal,
+  sh `histedit.c`): counted/`memchr` idioms completed by the adjacent
+  copy or explicit lengths — not string APIs. `bugprone-terminating-continue`
+  (nvi `v_paragraph.c`, sh `jobs.c`) and `EnumCastOutOfRange` (sed,
+  sh `miscbltin.c`): upstream-intent control flow and enum sentinels.
+
+The new `static` CI job (`ci/jobs/static.sh`, wired into `ci/run-ci.sh`
+and `.github/workflows/ci.yml`) runs gcc `-fanalyzer` and scan-build on
+every pass and gates on **new** `checker file` signatures against
+`ci/static-baseline/` (75 + 141 signatures, all carrying the verdicts
+recorded here); `STATIC_BASELINE_UPDATE=1` regenerates the lists after a
+deliberate toolchain bump. clang-tidy stays a refresh tool, not a gate:
+its noise profile (5697 warnings) needs a dedicated cleanup before it
+can gate anything.
+
 ## Hardening status
 
 - Sandboxing (both builds, default on): the Capsicum compatibility layer
