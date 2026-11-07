@@ -310,6 +310,7 @@ if require "gencat" gencat; then
     printf '$delset 5\n1 orphan\n' > gc4.msg
     assert_status "message without a set exits 1" 1 \
         "$(tool gencat)" gc4.cat gc4.msg
+fi
 
 group "fetch: integer overflow in Content-Length/Content-Range parsing"
 
