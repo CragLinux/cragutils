@@ -1,0 +1,4 @@
+  diff --git a/	 b/f.ld.c
+  +++ b/new.c
+  @@ -78 +90,1 @@
+  

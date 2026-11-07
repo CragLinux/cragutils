@@ -1,0 +1,12 @@
+cat at <<EOF
+EOF
+cat <<- 'END'
+	i
+	END
+tr acosub<<EOF
+linet hiw $Bv and $(cmd)
+EOF
+cat <<- 'END'
+	i
+	END
+ttrr ax $(cmd)OF1

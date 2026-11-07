@@ -1,0 +1,61 @@
+cat at <<EOF
+li
+EOF
+cat t <<EOF
+li
+EOF
+cat <<- 'END'
+	i
+	END
+tr a<<-cawct <<- 'END'
+Ii
+	END
+osubs`at <<EOF
+li
+EOF
+cat <<- 'END'
+	i
+	END
+t<EOF
+li
+EOF
+cat <<- 'END'
+	i
+	END
+tr ecat çt <<EOF
+li
+EOF
+cat <caT <<- 'END'
+	i
+	END
+tr acmr<<- 'END'
+	i
+	END
+tr ecat at <<EOF
+li
+EOF
+cat <<- 'END'
+	i
+	END
+tr acmraw $txt `nosut <<-cawct <<- 'END'
+Ii
+	END
+osubs`at <<EOF
+li
+EOF
+cat <<- 'END'
+	i
+	END
+t<EOF
+li
+EOF
+cat <<- 'END'
+	i
+	END
+tr ecat çt <<EOF
+li
+EOF
+cat <caT <<- 'END'
+	i
+	END
+tr acmraw $txt `nosu6

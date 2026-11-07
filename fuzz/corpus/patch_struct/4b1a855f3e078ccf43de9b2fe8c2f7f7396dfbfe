@@ -1,0 +1,12 @@
+Some leading garbage that is not a diff at all.
+--- aone.c
++++ b/oc	0024-01-01
+--- two.c.new	2024-01-Ó01
+*************
+*** 1,2 ****
+- x
+---  y
+1c1
+< left
+---
+> right

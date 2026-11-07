@@ -1,0 +1,6 @@
+cat <<EOF
+
+EOF
+cat <<- 'END'	i
+	END
+tr

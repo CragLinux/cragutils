@@ -1,0 +1,8 @@
+case $ in
+a|b) yes ;;
+*[0-9]) enum ;;
+*) echo ;;
+*[0-9]) echoo îo ;;
+*[0-p]) echo 2um ;;
+*) echono ;;
+eacwils¥¥t

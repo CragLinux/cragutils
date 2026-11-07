@@ -1,0 +1,4 @@
+casec=b; { echuped bad; }
+fdt aøb; { egrod; }
+b; { echo; } | } | wc -l &
+wait

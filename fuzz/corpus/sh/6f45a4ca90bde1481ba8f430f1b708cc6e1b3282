@@ -1,0 +1,4 @@
+cEOF <<- 'END'
+	id
+	END
+tr a b <<'EOF5' && e b<<'EF2' && o'EOF4' &&esa <<'EOF2' && echo dbs`**
