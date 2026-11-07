@@ -1,0 +1,5 @@
+diff --git a/src/fooc
++++ b/src/foo.c
+@@ -10,3 +10,4 @@ void );
++	new();
++	extra();

@@ -221,6 +221,19 @@ can take them if they ever want them.
   run into an in-loop alloca (cumulative stack growth) — malloc/free
   instead. The patch context is our compat shim; for upstream apply
   against libc/stdtime/strptime.c (same one-hunk change).
+- 0074 sed: regsub() formed its destination as `space + len` on a
+  never-used substitute space (NULL + 0 is UB; UBSan, first
+  substitution of every run) — guard like the cspace() len > 0 fix.
+- 0075 libfetch: Content-Length/Content-Range values accumulated with
+  plain off_t multiply-add and `last - first + 1` overflowed at
+  OFF_MAX — the wrapped value became fetch's believed body length
+  (silent response truncation; UBSan + PoC). Overflow-checked
+  accumulation, unrepresentable values now leave the length unknown.
+- 0076 patch: locate_hunk() scanned offsets from 1 outward, so a diff
+  claiming a huge hunk line number cost proportional iterations before
+  failing (~23 CPU s at 2^32, effectively unbounded at 2^63; CPU DoS
+  on untrusted diffs) — skip offsets that leave the hunk outside the
+  input file; candidates and order unchanged.
 
 - 0035 patch: three apply-path memory-safety bugs — NULL pattern line
   dereferenced in patch_match (46 corpus inputs segfault), heap

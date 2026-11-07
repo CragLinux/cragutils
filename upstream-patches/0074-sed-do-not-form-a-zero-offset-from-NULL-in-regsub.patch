@@ -1,0 +1,57 @@
+From 0ba4ef655739dbf5cdb33568766347d7ec30be51 Mon Sep 17 00:00:00 2001
+From: Michael John <mj@tierone.software>
+Date: Fri, 6 Nov 2026 22:33:29 -0500
+Subject: [PATCH] sed: do not form a zero offset from NULL in regsub
+
+regsub() started with dst = sp->space + sp->len on a never-used
+substitute space (space == NULL, len == 0): a zero offset from NULL is
+undefined behaviour (UBSan "applying zero offset to null pointer",
+process.c:720), hit by the first substitution of every run and seen
+from both fuzz_sedcompile and fuzz_seddata.  Same UB class as the
+cspace()/ed/sort zero-length copy fixes; behaviour was correct, UB
+only.
+
+Only form space + len for a live buffer (the cspace() len > 0 guard
+idiom).  The regsub output paths (&, backrefs, global, zero-width
+matches) are pinned by tests in 12-regress-tools.sh, and
+fuzz/corpus/sedcompile/regsub-null-dst-ubsan is a minimal reproducer
+(matches at pattern-space offset 0 on the harness's first input line,
+which is the only path that reaches regsub with a fresh space).
+
+Co-Authored-By: Hermes Agent <hermes@tierone.software>
+---
+ fuzz/corpus/sedcompile/regsub-null-dst-ubsan | 1 +
+ src.freebsd/sed/process.c                    | 8 +++++++-
+ 2 files changed, 8 insertions(+), 1 deletion(-)
+ create mode 100644 fuzz/corpus/sedcompile/regsub-null-dst-ubsan
+
+diff --git a/fuzz/corpus/sedcompile/regsub-null-dst-ubsan b/fuzz/corpus/sedcompile/regsub-null-dst-ubsan
+new file mode 100644
+index 00000000..21e1dbda
+--- /dev/null
++++ b/fuzz/corpus/sedcompile/regsub-null-dst-ubsan
+@@ -0,0 +1 @@
++s/h/x&/
+\ No newline at end of file
+diff --git a/src.freebsd/sed/process.c b/src.freebsd/sed/process.c
+index 3257ba6f..11d5250a 100644
+--- a/src.freebsd/sed/process.c
++++ b/src.freebsd/sed/process.c
+@@ -717,7 +717,13 @@ regsub(SPACE *sp, char *string, char *src)
+ 		dst = sp->space + sp->len;				\
+ 	}
+ 
+-	dst = sp->space + sp->len;
++	/*
++	 * sp->space is still NULL on the first use of a fresh space
++	 * (sp->len == 0); even a zero offset from NULL is UB, so only
++	 * form space + len for a live buffer (same guard idiom as the
++	 * cspace() len > 0 fix).
++	 */
++	dst = sp->len > 0 ? sp->space + sp->len : sp->space;
+ 	while ((c = *src++) != '\0') {
+ 		if (c == '&')
+ 			no = 0;
+-- 
+2.43.0
+

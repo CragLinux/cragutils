@@ -1,0 +1,4 @@
+case $x in
+a…b) echo ye{ ;;
+*[0-9]) f a b; { echoÿ grouped;  ok || do2echo bad;eŒŒho ok || echo  || echo baroehed;  ok || erouped;  ok|| echo bad;eŒok || echo bad; }
+f aok || echo baroehed;  ok || echo b bait

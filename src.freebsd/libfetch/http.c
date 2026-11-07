@@ -910,15 +910,37 @@ http_parse_mtime(const char *p, time_t *mtime)
 }
 
 /*
- * Parse a content-length header
+ * off_t upper bound, for the overflow-checked header-value parsers
+ * below (the dd/grep ports carry the same fallback).
  */
+#ifndef OFF_MAX
+#define OFF_MAX ((off_t)(((1ULL << (sizeof(off_t) * CHAR_BIT - 2)) - 1) * 2 + 1))
+#endif
+
+/*
+ * Accumulate one decimal digit into an off_t, rejecting any value that
+ * would overflow.  The inputs are response-header values and therefore
+ * attacker-controlled; the plain multiply-and-add wrapped (UBSan
+ * signed-integer overflow).
+ */
+static int
+http_accum_digit(off_t *acc, int digit)
+{
+
+	if (*acc > (OFF_MAX - digit) / 10)
+		return (-1);
+	*acc = *acc * 10 + digit;
+	return (0);
+}
+
 static int
 http_parse_length(const char *p, off_t *length)
 {
 	off_t len;
 
 	for (len = 0; *p && isdigit((unsigned char)*p); ++p)
-		len = len * 10 + (*p - '0');
+		if (http_accum_digit(&len, *p - '0') != 0)
+			return (-1);
 	if (*p)
 		return (-1);
 	DEBUGF("content length: [%lld]\n", (long long)len);
@@ -942,17 +964,26 @@ http_parse_range(const char *p, off_t *offset, off_t *length, off_t *size)
 		++p;
 	} else {
 		for (first = 0; *p && isdigit((unsigned char)*p); ++p)
-			first = first * 10 + *p - '0';
+			if (http_accum_digit(&first, *p - '0') != 0)
+				return (-1);
 		if (*p != '-')
 			return (-1);
 		for (last = 0, ++p; *p && isdigit((unsigned char)*p); ++p)
-			last = last * 10 + *p - '0';
+			if (http_accum_digit(&last, *p - '0') != 0)
+				return (-1);
 	}
 	if (first > last || *p != '/')
 		return (-1);
 	for (len = 0, ++p; *p && isdigit((unsigned char)*p); ++p)
-		len = len * 10 + *p - '0';
-	if (*p || len < last - first + 1)
+		if (http_accum_digit(&len, *p - '0') != 0)
+			return (-1);
+	/*
+	 * len must cover first..last; compare without the +1, which
+	 * overflows for a range ending at OFF_MAX.  Surviving this check
+	 * means last - first + 1 <= len <= OFF_MAX, so the computation
+	 * of *length below cannot overflow.
+	 */
+	if (*p || len <= last - first)
 		return (-1);
 	if (first == -1) {
 		DEBUGF("content range: [*/%lld]\n", (long long)len);

@@ -1,0 +1,10 @@
+Some leading garbage that is not a diff at all.
+--- aone.c
++++ b/oc	0280-01-01
+--- two.c.new	20,2 ****
+- x
+---  y
+1c1
+< left
+---
+> right

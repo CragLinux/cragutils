@@ -1,0 +1,6 @@
+ct << 'Eat <<EOF
+line wih $EnD'
+	ibs#
+Eat <<EOF
+line with $vs`
+EOF2

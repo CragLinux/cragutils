@@ -1,0 +1,78 @@
+From d32550387fdfa85dbe24ba3b9a1693183eaeaf25 Mon Sep 17 00:00:00 2001
+From: Michael John <mj@tierone.software>
+Date: Fri, 6 Nov 2026 22:33:49 -0500
+Subject: [PATCH] patch: skip dead offsets in locate_hunk (huge-line CPU DoS)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+locate_hunk() walked offsets from 1 outward around pch_first() +
+last_offset to place each hunk, so a diff claiming a huge hunk line
+number made the walk to the only live window cost proportional
+iterations: a 1.1 KB crafted diff claiming line 2^32 burned ~23 CPU
+seconds before "Hunk #1 failed" (fuzz/corpus/patch_struct/0e215230…,
+caught by the tests/t/20-fuzz-corpus.sh real-binary replay), and a
+claimed 2^63 line number is an effectively unbounded CPU DoS.  patch
+consumes fully attacker-controlled diffs (mailed patches), so this is
+reachable with no file access; it is the claimed-hunk-position cousin
+of the earlier claimed-hunk-size memory-DoS fix.
+
+Offsets that leave the hunk outside the input file can never match --
+ifetch() reports those lines missing and a hunk with missing pattern
+lines does not match -- so the scan now starts at the first offset
+that can put the hunk inside the file.  The candidate set and the
+closest-first order are unchanged (pinned: a hunk whose line numbers
+are merely wrong still matches at a nonzero offset).  The corpus input
+now fails in 3 ms; diffs claiming 2^63-1 or 2^64 lines fail in ~1 ms.
+
+Co-Authored-By: Hermes Agent <hermes@tierone.software>
+---
+ src.freebsd/patch/patch.c | 23 ++++++++++++++++++++++-
+ 1 file changed, 22 insertions(+), 1 deletion(-)
+
+diff --git a/src.freebsd/patch/patch.c b/src.freebsd/patch/patch.c
+index d03eb2db..acd29bca 100644
+--- a/src.freebsd/patch/patch.c
++++ b/src.freebsd/patch/patch.c
+@@ -727,6 +727,7 @@ locate_hunk(LINENUM fuzz)
+ 	LINENUM	pat_lines = pch_ptrn_lines();
+ 	LINENUM	max_pos_offset = input_lines - first_guess - pat_lines + 1;
+ 	LINENUM	max_neg_offset = first_guess - last_frozen_line - 1 + pch_context();
++	LINENUM	first_offset = 1;
+ 
+ 	if (pat_lines == 0) {		/* null range matches always */
+ 		if (verbose && fuzz == 0 && (diff_type == CONTEXT_DIFF
+@@ -740,9 +741,29 @@ locate_hunk(LINENUM fuzz)
+ 	}
+ 	if (max_neg_offset >= first_guess)	/* do not try lines < 0 */
+ 		max_neg_offset = first_guess - 1;
++	/*
++	 * Offsets that leave the hunk outside the input file can never
++	 * match: ifetch() reports those lines as missing and a hunk with
++	 * missing lines does not match.  Skip the dead prefix of the
++	 * scan -- a diff claiming a huge hunk line number would
++	 * otherwise make the walk toward the live window cost
++	 * proportional iterations (1 KB of crafted diff claiming line
++	 * 2^32 burned ~23 CPU seconds here, and a claimed 2^63 line is
++	 * an effectively unbounded CPU DoS on untrusted diffs).  The
++	 * candidates that are tried, and their closest-first order, are
++	 * unchanged.
++	 */
++	if (pat_lines <= input_lines) {
++		LINENUM last_fit = input_lines - pat_lines + 1;
++
++		if (first_guess > last_fit)
++			first_offset = first_guess - last_fit;
++	}
++	if (first_guess < 1 && 1 - first_guess > first_offset)
++		first_offset = 1 - first_guess;
+ 	if (first_guess <= input_lines && patch_match(first_guess, 0, fuzz))
+ 		return first_guess;
+-	for (offset = 1; ; offset++) {
++	for (offset = first_offset; ; offset++) {
+ 		bool	check_after = (offset <= max_pos_offset);
+ 		bool	check_before = (offset <= max_neg_offset);
+ 
+-- 
+2.43.0
+

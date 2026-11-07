@@ -1,0 +1,4 @@
+casechb; { echuped bad; }
+fdt aøb; { echo grod; }
+b; { echo grouped; } | } | wc -l &
+wait

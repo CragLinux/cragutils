@@ -63,6 +63,51 @@ mktarget target2.txt
 assert_bounded "unified diff with 4e17-line hunk stays bounded" 262144 \
     "$PATCH" -t -C -i dos-unified.diff target2.txt
 
+group "patch: CPU-exhaustion DoS via huge claimed hunk line numbers"
+
+# locate_hunk() walked offsets from 1 outward to place the hunk, so a
+# diff claiming a huge hunk line number made the walk to the live
+# window cost proportional iterations: a 1 KB context diff claiming
+# line 2^32 burned ~23 CPU seconds, and a claimed 2^63 line number is
+# an effectively unbounded CPU DoS on untrusted diffs.  The scan now
+# starts at the first offset that can put the hunk inside the file;
+# the candidates tried (and their closest-first order) are unchanged.
+cat > dos-hugeline.diff <<'EOF'
+9223372036854775807,9223372036854775807c1
+< x
+---
+> y
+EOF
+mktarget dos-hugeline.txt
+assert_no_crash "normal diff claiming line 2^63-1 fails fast" \
+    "$PATCH" -t -C -i dos-hugeline.diff dos-hugeline.txt
+
+cat > dos-bigline.diff <<'EOF'
+4294967295,4294967295c1
+< x
+---
+> y
+EOF
+mktarget dos-bigline.txt
+assert_no_crash "normal diff claiming line 2^32-1 fails fast" \
+    "$PATCH" -t -C -i dos-bigline.diff dos-bigline.txt
+
+# the skipped offsets were dead candidates only: a hunk whose line
+# numbers are merely wrong must still match at a nonzero offset
+cat > offset.diff <<'EOF'
+7,8c7,8
+< bravo
+< charlie
+---
+> BRAVO
+> CHARLIE
+EOF
+mktarget offset.txt
+assert_ok "hunk still matches at a nonzero offset" \
+    "$PATCH" -t -i offset.diff offset.txt
+assert_out "offset-applied content correct" "BRAVO" \
+    sh -c "$(tool sed) -n 2p offset.txt"
+
 group "patch: out-of-bounds read on malformed '--' line"
 
 # pch.c evaluated p_char[p_end - 1] with p_end == 0 — a read before the

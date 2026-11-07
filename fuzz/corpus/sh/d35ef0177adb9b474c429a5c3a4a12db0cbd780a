@@ -1,0 +1,5 @@
+c $var and $(cmdOFd
+	END
+tr a b <<'EOF4' && eb a b <<'EOF4' && eb << eb <<'EOF2caes' && echo <<'EOF4' && eb << eb <<'EOF2' && echo dbs`****** a b <<'EOF4' && eb <<'EOF2' && echo do'EOF4' && eb <<'EOF2' tr a b <<'EoF4' && e*** a b <<'EOF4' && eb <<'EOF2' && echo do'EOF4' && eb <<'EOF2' tr a b <<'EoF4' && eb << eb <<'EOF2' && echo do'EOF4' && eb <<'EOF2' tr a b <<'EOF4' && ebo <<'EOF4' && e
+EOF
+cat <<- OFa bOF2' &&secho dbs`********EOF2

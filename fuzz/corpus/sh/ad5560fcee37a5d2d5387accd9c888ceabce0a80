@@ -1,0 +1,4 @@
+cap <<EOFt :
+	indented $note$$$$$$$$$$$$$$$$$$$$$$$$$$at :<<- 'END'
+	indented $naw $nosubs`(
+EOF2

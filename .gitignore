@@ -19,3 +19,6 @@ prof-*/
 
 fuzz/obj-sh/
 ci/.upstream-sync.state
+
+# transient campaign logs
+fuzz/logs/
