@@ -727,6 +727,7 @@ locate_hunk(LINENUM fuzz)
 	LINENUM	pat_lines = pch_ptrn_lines();
 	LINENUM	max_pos_offset = input_lines - first_guess - pat_lines + 1;
 	LINENUM	max_neg_offset = first_guess - last_frozen_line - 1 + pch_context();
+	LINENUM	first_offset = 1;
 
 	if (pat_lines == 0) {		/* null range matches always */
 		if (verbose && fuzz == 0 && (diff_type == CONTEXT_DIFF
@@ -740,9 +741,29 @@ locate_hunk(LINENUM fuzz)
 	}
 	if (max_neg_offset >= first_guess)	/* do not try lines < 0 */
 		max_neg_offset = first_guess - 1;
+	/*
+	 * Offsets that leave the hunk outside the input file can never
+	 * match: ifetch() reports those lines as missing and a hunk with
+	 * missing lines does not match.  Skip the dead prefix of the
+	 * scan -- a diff claiming a huge hunk line number would
+	 * otherwise make the walk toward the live window cost
+	 * proportional iterations (1 KB of crafted diff claiming line
+	 * 2^32 burned ~23 CPU seconds here, and a claimed 2^63 line is
+	 * an effectively unbounded CPU DoS on untrusted diffs).  The
+	 * candidates that are tried, and their closest-first order, are
+	 * unchanged.
+	 */
+	if (pat_lines <= input_lines) {
+		LINENUM last_fit = input_lines - pat_lines + 1;
+
+		if (first_guess > last_fit)
+			first_offset = first_guess - last_fit;
+	}
+	if (first_guess < 1 && 1 - first_guess > first_offset)
+		first_offset = 1 - first_guess;
 	if (first_guess <= input_lines && patch_match(first_guess, 0, fuzz))
 		return first_guess;
-	for (offset = 1; ; offset++) {
+	for (offset = first_offset; ; offset++) {
 		bool	check_after = (offset <= max_pos_offset);
 		bool	check_before = (offset <= max_neg_offset);
 
