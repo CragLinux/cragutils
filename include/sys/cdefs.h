@@ -58,14 +58,16 @@
  * counted_by: annotates a pointer with the member holding its element
  * count, so -fsanitize=bounds and _FORTIFY_SOURCE can check accesses.
  *
- * Enabled for clang only.  gcc 15 also answers __has_attribute(counted_by)
- * yes, but accepts the attribute solely on flexible array members and
- * rejects it on pointers with a hard error, so probing the attribute is
- * not enough to know it can be used here.  The annotation is a checking
+ * Enabled for clang 19+ only.  gcc 15 also answers
+ * __has_attribute(counted_by) yes, but accepts the attribute solely on
+ * flexible array members and rejects it on pointers with a hard error;
+ * clang 18 has the same FAM-only restriction (it probes true, then hard
+ * errors on a pointer form), so probing the attribute is not enough to
+ * know it can be used here.  The annotation is a checking
  * aid with no semantic effect, so compiling it away is always safe.
  */
 #if defined(__has_attribute) && defined(__clang__)
-#if __has_attribute(counted_by)
+#if __clang_major__ >= 19 && __has_attribute(counted_by)
 #define __cu_counted_by(x) __attribute__((counted_by(x)))
 #endif
 #endif
