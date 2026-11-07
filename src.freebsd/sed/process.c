@@ -717,7 +717,13 @@ regsub(SPACE *sp, char *string, char *src)
 		dst = sp->space + sp->len;				\
 	}
 
-	dst = sp->space + sp->len;
+	/*
+	 * sp->space is still NULL on the first use of a fresh space
+	 * (sp->len == 0); even a zero offset from NULL is UB, so only
+	 * form space + len for a live buffer (same guard idiom as the
+	 * cspace() len > 0 fix).
+	 */
+	dst = sp->len > 0 ? sp->space + sp->len : sp->space;
 	while ((c = *src++) != '\0') {
 		if (c == '&')
 			no = 0;
