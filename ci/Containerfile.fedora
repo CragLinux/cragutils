@@ -4,7 +4,7 @@
 FROM registry.fedoraproject.org/fedora:latest
 
 RUN dnf -y install --setopt=install_weak_deps=False \
-        gcc gcc-c++ clang compiler-rt llvm \
+        gcc gcc-c++ clang clang-tools compiler-rt llvm \
         meson ninja-build pkgconf-pkg-config \
         flex byacc bison \
         libxo-devel \

@@ -201,3 +201,23 @@ jobs:
 
       - name: build and test (ReleaseSafe)
         run: sh ci/jobs/zig-build.sh
+
+  static:
+    name: static analysis gate
+    runs-on: ubuntu-latest
+    container:
+      image: registry.fedoraproject.org/fedora:latest
+    steps:
+      - name: dependencies
+        run: |
+          dnf -y install --setopt=install_weak_deps=False \
+            gcc clang clang-tools compiler-rt llvm meson ninja-build \
+            pkgconf-pkg-config flex byacc bison libxo-devel \
+            ncurses-devel libedit-devel openssl-devel zlib-devel \
+            bzip2-devel xz-devel libzstd-devel libacl-devel \
+            libselinux-devel binutils file diffutils git which
+
+      - uses: actions/checkout@v4
+
+      - name: gcc -fanalyzer + scan-build against baseline
+        run: sh ci/jobs/static.sh

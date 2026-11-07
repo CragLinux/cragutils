@@ -33,6 +33,7 @@ they are cached by podman.
 | `msan` | MemorySanitizer build of the harnesses + corpus replay |
 | `hardening` | checks built binaries carry the expected mitigations |
 | `zig` | zig build (ReleaseSafe), smoke tests + full suite |
+| `static` | gcc -fanalyzer + scan-build, gated against the findings baseline |
 
 `sanitizers` is the job most likely to find something new: it drives the
 regression tests and the whole fuzz corpus through instrumented binaries,
@@ -43,6 +44,12 @@ ran.
 `musl` matters more than its position in the list suggests. glibc hides
 bugs that musl does not — `printf("%s", NULL)` prints `(null)` on glibc
 and segfaults on musl, and locale and regex behaviour differ.
+
+`static` gates on *new* analyzer findings rather than raw counts: each
+warning is normalized to a `checker file` signature and compared against
+`ci/static-baseline/`; the verdicts for every known signature live in
+`SECURITY-FINDINGS.md`. `STATIC_BASELINE_UPDATE=1` regenerates the lists
+after a deliberate toolchain bump; triage the delta before committing it.
 
 ## Images
 

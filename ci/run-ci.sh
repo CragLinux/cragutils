@@ -22,6 +22,7 @@
 #   msan        MemorySanitizer build of the harnesses + corpus replay
 #   hardening   verify built binaries carry the expected mitigations
 #   zig         zig build (ReleaseSafe), smoke + full suite
+#   static      gcc -fanalyzer + scan-build vs. the findings baseline
 #
 # Options:
 #   --host          run directly instead of in a container
@@ -39,7 +40,7 @@ rebuild=0
 keep_going=0
 jobs=
 
-all_jobs="gcc clang musl sanitizers fuzz msan hardening zig"
+all_jobs="gcc clang musl sanitizers fuzz msan hardening zig static"
 
 while [ $# -gt 0 ]; do
     case $1 in
@@ -167,6 +168,17 @@ run_job() {
                     "ZIG_OPTIMIZE=${ZIG_OPTIMIZE:-ReleaseSafe}"
             else
                 ZIG_OPTIMIZE=${ZIG_OPTIMIZE:-ReleaseSafe} sh "$srcdir/ci/jobs/zig-build.sh"
+            fi ;;
+        static)
+            if [ "$use_container" = "1" ]; then
+                build_image "$img_fedora" Containerfile.fedora
+                in_container "$img_fedora" 'sh ci/jobs/static.sh' \
+                    "STATIC_BASELINE=${STATIC_BASELINE:-1}" \
+                    "STATIC_BASELINE_UPDATE=${STATIC_BASELINE_UPDATE:-0}"
+            else
+                STATIC_BASELINE=${STATIC_BASELINE:-1} \
+                STATIC_BASELINE_UPDATE=${STATIC_BASELINE_UPDATE:-0} \
+                    sh "$srcdir/ci/jobs/static.sh"
             fi ;;
         hardening)
             # Reuses the gcc job's tree; build it first if absent.
