@@ -343,7 +343,7 @@ get_paths(SCR *sp, CSC *csc)
 				++nentries;
 
 		/* Build an array of pointers to the paths. */
-		CALLOC_GOTO(sp, csc->paths, nentries + 1, sizeof(char **));
+		CALLOC_GOTO(sp, csc->paths, nentries + 1, sizeof(*csc->paths));
 		for (pathp = csc->paths, p = strtok(csc->pbuf, ":");
 		    p != NULL; p = strtok(NULL, ":"))
 			*pathp++ = p;

@@ -93,7 +93,8 @@ main(int argc, char **argv)
 			}
 			if (expand_number(do_relative || do_round ?
 			    optarg + 1 : optarg,
-			    &usz) == -1 || usz < 0)
+			    &usz) == -1 || usz < 0 ||
+			    (do_round && usz == 0))
 				errx(EXIT_FAILURE,
 				    "invalid size argument `%s'", optarg);
 

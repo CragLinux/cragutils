@@ -1147,7 +1147,8 @@ LOW / ACCEPTED (race exists, no boundary crossed):
 Re-ran the analyzer set on the current tree and triaged everything not
 already covered by the verdicts above. Deltas vs. the recorded
 baselines: gcc `-fanalyzer` 223 warnings → 155 (75 `checker file`
-signatures), scan-build 560 reports → 238 (141 signatures), plus a
+signatures), scan-build 560 reports → 372 (213 `checker file`
+signatures), plus a
 first clang-tidy pass (`clang-analyzer-*,bugprone-*,cert-*,security-*`
 over all 495 C TUs: 5697 warnings, 534 in the analyzer/security subset
 — a style-noise profile dominated by `bugprone-assignment-in-if` (1836,
@@ -1155,6 +1156,25 @@ the BSD `if ((c = getopt(...)) != -1)` idiom) and
 `bugprone-narrowing-conversions` (1096); its analyzer subset maps
 one-to-one onto the clusters triaged here). All of the new clusters
 below had no recorded verdict before this pass.
+
+CORRECTION (2026-11, static-gate repair): this section originally
+claimed "scan-build 560 reports → 238 (141 signatures)" and checked in a
+141-line baseline. Both numbers were wrong and are superseded by the
+per-signature triage in the next section. The 238-report run was
+crippled: 115 clang-18 compile errors (`counted_by only applies to C99
+flexible array members` — the pointer-form `__cu_counted_by` in
+`nvi/common/args.h` and `libfetch/common.h` under the old `cdefs.h`
+gate) left the entire `nvi/{cl,common,ex,vi}` and `libfetch` trees
+UNANALYZED, and the signature extraction applied `norm_path` to the
+whole `type file` line, eating the checker type so every signature
+collapsed to a bare path and distinct reports merged per file. The
+`cdefs.h` gate is now correct (clang 19+, which is when PR #90786 added
+the pointer form). The true inventory of the merged tree is 372
+scan-build reports / 213 `checker file` signatures, all carrying the
+verdicts recorded below; `ci/static-baseline/scanbuild.txt` has been
+regenerated from a clean post-fix run. The gcc `-fanalyzer` baseline was
+never affected (the extraction was already `flag file` there; 75/75
+signatures matched).
 
 FIXED (real defects, all new):
 
@@ -1260,12 +1280,193 @@ change):
 
 The new `static` CI job (`ci/jobs/static.sh`, wired into `ci/run-ci.sh`
 and `.github/workflows/ci.yml`) runs gcc `-fanalyzer` and scan-build on
-every pass and gates on **new** `checker file` signatures against
-`ci/static-baseline/` (75 + 141 signatures, all carrying the verdicts
-recorded here); `STATIC_BASELINE_UPDATE=1` regenerates the lists after a
-deliberate toolchain bump. clang-tidy stays a refresh tool, not a gate:
-its noise profile (5697 warnings) needs a dedicated cleanup before it
-can gate anything.
+every pass and gates on **new** signatures against `ci/static-baseline/`
+— `checker file` for scan-build, `flag file` for gcc — every baseline
+signature carrying the verdicts recorded here; a signature present in
+the run but not the baseline fails the job, and baseline signatures
+that no longer fire are reported as resolved. `STATIC_BASELINE=0`
+analyzes and reports without gating; `STATIC_BASELINE_UPDATE=1`
+regenerates the lists after a deliberate toolchain bump or a triaged
+new finding (only once every new signature carries a verdict).
+clang-tidy stays a refresh tool, not a gate: its noise profile (5697
+warnings) needs a dedicated cleanup before it can gate anything.
+
+## Static analysis refresh (2026-11): true signature inventory and triage
+
+Fresh run on the merged tree (the `static` job's gcc `-fanalyzer` +
+clang scan-build), pre-fix inventory this triage worked from: 372
+scan-build reports collapsing to 213 distinct `checker file`
+signatures, plus the 75 gcc `-fanalyzer` signatures
+(unchanged — 75/75 matched `ci/static-baseline/gcc-analyzer.txt`, whose
+verdicts are all recorded above; that baseline is left as-is). Every one
+of the 213 scan-build signatures carries a verdict below. Families:
+dead assignment (56), 'nonnull' passed null (29), null dereference (27),
+dead nested assignment (21), vfork insecure/dangerous (10 + 9), dead
+increment (9), uninitialized argument (8), memory leak (8), assigned
+garbage (8), result garbage (7), use-after-free (7), division by zero
+(3), branch garbage (3), setuid/seteuid/setegid unchecked (2 + 1 + 1),
+and one each: allocator sizeof mismatch, invalid argument, null function
+pointer, insecure mktemp.
+
+FIXED — real defects found by this triage (all PoC- or trace-verified):
+
+- cut(1) `b_n_cut()` heap corruption — `cut -b -n` in any multibyte
+  locale. The line cursor was advanced with `lbuf += clen`, then the
+  *interior* pointer was handed back to `getline()` and `free()`:
+  glibc `free(): invalid pointer` SIGABRT on every run, and SIGSEGV as
+  soon as a later line outgrew the getline buffer and `getdelim()`
+  realloc'd the interior pointer. Reproduced live
+  (`LC_ALL=C.utf8 cut -b 1 -n` on two lines). The function only runs
+  where `MB_CUR_MAX > 1` and `-n` is given — an obscure combination,
+  which is how it survived — and the code is verbatim in freebsd-src
+  main (Robbins' `b_n_cut`). Fixed: walk each line with a separate
+  cursor; `lbuf` stays at the allocation base. Regression tests in
+  `tests/t/12-regress-tools.sh` (probe finds a multibyte locale, skips
+  where none exists); verified the pre-fix binary dies with SIGABRT
+  (134) / SIGSEGV (139) on the exact test commands. The scan-build
+  "Function call with invalid argument" signature in the same function
+  (fwrite with a zero-sized remaining buffer) pointed at this code but
+  is itself the mbrlen-contract modeling gap below — it still fires
+  post-fix and keeps its FP verdict.
+- truncate(1) SIGFPE on a zero round multiple — `truncate -s %0 file`
+  and `truncate -s /0 file` parsed `0` as a legal multiple and computed
+  `sb.st_size % sz` with `sz == 0`: deterministic signal 8. The
+  earlier refresh pass filed truncate's divide-by-zero under the FP
+  family "tandem invariant loss" without a live run; the run disproves
+  that verdict. Fixed: the `%N`/`/N` forms reject a zero multiple at
+  parse time. Regression tests in `tests/t/12-regress-tools.sh`.
+- nvi `file_end()` heap use-after-free (`exf.c:689`) — the FR_TMPFILE
+  block freed the FREF and its `frp->name`, then the db-close failure
+  path read `frp->name` for the "close" diagnostic: a use of freed
+  memory on the `ep->db->close() && !force` path. Reachability is
+  narrow (the file_m1/m2/m3 modified/temp fences mean the freed-FREF
+  variant needs a close failure on a never-renamed temporary buffer
+  with `force == 0` — the delayed-write/NFS/EINTR close-error class
+  already treated as real in the P6 double-fclose fix above), but the
+  close-failure machinery is directly drivable (RLIMIT_FSIZE with
+  SIGXFSZ ignored fails exactly the close-time recovery sync write —
+  live: "File too large ... close") and the free-then-use shape was
+  indefensible. Fixed: the free is deferred past the close attempt
+  (behavior identical on every path). Regression test in
+  `tests/t/11-regress-nvi.sh` drives the close-failure branch and
+  asserts the diagnostic survives with no signal death; the freed
+  pointer read itself is not observable on glibc (freed name bytes stay
+  intact) and is covered by the sanitizer jobs.
+- nvi `ex_cscope.c` `get_paths()` allocator sizeof mismatch —
+  `CALLOC_GOTO(..., nentries + 1, sizeof(char **))` for a `char
+  **paths` array: wrong sizeof operand, sized correctly only because
+  `sizeof(char **) == sizeof(char *)` on every supported ABI. Same
+  class as the tr(1) `sizeof(int)`/`sizeof(*s->set)` fix; now
+  `sizeof(*csc->paths)`. No behavior change, so no CLI regression
+  test (the tr(1) precedent).
+
+FALSE POSITIVE — individual verdicts (each report trace read):
+
+- Use-after-free — awk `run.c:124` `adjbuf`: the "use" is the debug
+  `DPRINTF` after `realloc(*pbuf, ...)` printing the *pre-realloc
+  address* through `%p`. Value copy only, no dereference, `dbg`-gated.
+- Use-after-free — tail `reverse.c:209` `r_buf`, gencat `gencat.c:691`
+  `MCDelSet`, nvi `cut.c:110` (`cb_rotate` → `CBNAME`), nvi
+  `ex.c:2121` `ex_load`, nvi `ex_tag.c:858/899/901`
+  (`ex_tagf_alloc`/`ex_tag_free`): the recorded queue-macro family —
+  canonical drain idioms that unlink the head before freeing
+  (`TAILQ_REMOVE`/`SLIST_REMOVE_HEAD`/`SLIST_REMOVE_AFTER`); the
+  analyzer loses the head update through the `tqe_prev`/`sle_next`
+  indirection, so the next `TAILQ_FIRST`/`SLIST_FOREACH` looks like a
+  read of the freed node. Each site re-fetches from the queue head per
+  iteration and only walks live entries; the gencat drain is also
+  covered by its regression tests (the pre-fix double free aborted,
+  the post-fix loop passes).
+- Use-after-free — nvi `exf.c:432` (`file_init` err path): the trace
+  assumes `file_end(sp, ep, 1)` frees the fresh `ep`, but the calloc'd
+  `ep` has `refcnt == 0`, so `--ep->refcnt != 0` returns without
+  freeing (the `refcnt == 1` state is infeasible); the `err`/`oerr`
+  path then frees `ep` exactly once. (The `exf.c:689` UAF in the same
+  function is real and fixed above.)
+- Called function pointer is null — ee `menu_op` (`ee.c:3544/3546`):
+  the dispatch keys `argument != -1` → `iprocedure(argument)`,
+  `ptr_argument != NULL` → `procedure(ptr_argument)`, else
+  `nprocedure()`. The invariant holds for all eight static
+  `menu_entries` tables (checked entry by entry; there are no
+  dynamically built menus): every `argument != -1` entry has
+  `iprocedure` set, every `ptr_argument` entry has `procedure` set,
+  and the all-NULL title rows are covered by the outer
+  `procedure || iprocedure || nprocedure` guard. The two flagged
+  states match no table entry.
+- Division by zero — df `fsbtoblk` (`df.c:459`): `bs` is `getbsize()`'s
+  output, whose contract is `blocksize >= 512` (a `BLOCKSIZE=0` or
+  malformed env clamps through the `underflow` path), and the `hflag`
+  path never reaches `fsbtoblk`. The analyzer carried the static
+  `blocksize` as its zero initializer.
+- Division by zero — nvi `opts_dump` (`options.c:907`):
+  `numrows = s_num / numcols` with `numcols` provably in [1, 10]: the
+  sizing loop only assigns `numcols = sp->cols / colwidth` inside
+  `colwidth >= 10` (cannot be 0) and otherwise exits at `numcols == 1`.
+  Tandem arithmetic-relation loss.
+- Dereference of null pointer — printf `getchr`/`getstr`/`getnum`
+  (`printf.c:676/684/714`): `gargv` is always a live pointer into the
+  saved argv vector (the only assignments are `gargv = ++argv` and
+  `gargv = &myargv[i]`); the `if (!*gargv)` guards are exactly the
+  argv-end `*gargv == NULL` case the `getint` fix comment describes.
+  The analyzer lost the non-nullness across `printf_doformat`'s
+  `fargv` branches.
+- Function call with invalid argument — cut `b_n_cut`
+  (`cut.c:316`): "fwrite buffer with size 0" — the analyzer does not
+  model `mbrlen()`'s return contract (`clen <= lbuflen`), so it
+  explores `clen` larger than the bytes remaining after `p += clen`
+  and reports the write as overrunning a zero-sized remainder. The
+  loop invariant (`p` within the line, `clen` bytes consumed) holds
+  by construction. The same function's real defect — the interior
+  `getline()`/`free()` pointer — is fixed above; this residual is the
+  pure modeling gap.
+
+FALSE POSITIVE / accepted — family verdicts (one spot-checked example
+per family; each maps onto a recorded verdict above):
+
+- Dead assignment (56), dead nested assignment (21), dead increment
+  (9): dead-store noise, not security-relevant (recorded policy).
+  Spot-checked `awk/awkgram.tab.c:4026` (`yym = 0` in the generated
+  bison parser), `uudecode.c:135` (`argc -= optind`), `awk/lib.c:406`
+  (`sep = *inputFS` in an enclosing expression).
+- Argument with 'nonnull' attribute passed null (29): the recorded
+  FATAL/err(3)-is-noreturn modeling family (awk's `FATAL` is defined
+  away for C99; `err(3)` paths). Spot-checked `awk/b.c:1194` and
+  `awk/run.c:2265` — both `FATAL`/loop-exit after a failed allocation
+  the analyzer models as returning.
+- vfork families (10 "insecure implementation-specific behavior", 9
+  "dangerous construct in a vforked process"): recorded — the flagged
+  calls are async-signal-safe (dup2/close/open/sigprocmask),
+  read-only, local-only assignments, or explicitly permitted
+  (execl/_exit); xargs was fixed in the earlier pass. Spot-checked
+  `apply.c:305` (`sigprocmask` after vfork — async-signal-safe).
+- setuid/seteuid/setegid unchecked returns (4: telnet `commands.c`,
+  tip `tip.c` ×2, wall `wall.c`): legacy privilege-*drop* idiom in
+  tools that are not setuid in this port — there is no elevation to
+  preserve on failure. Matches upstream; accepted.
+- mktemp (1, netcat `netcat.c:406`): known pattern — `mktemp` names a
+  unix-domain datagram socket path in `/tmp`; accepted (recorded).
+- Assigned value garbage (8), result garbage (7), uninitialized
+  argument (8), branch condition garbage (3): the recorded
+  garbage/uninitialized FP families (pr.c cluster, tandem
+  invariant/arithmetic-relation loss, localeconv-string and
+  `conv_mbtowc` out-param contracts, getdate/getcap clusters).
+  Spot-checked `pr.c:551/558` (`vc[tvc].cnt`), `fmt.c:557`
+  (`might_be_header`), `envopts.c:370`.
+- Memory leak (8): exit-path leaks of short-lived tools (echo, env,
+  md5, xinstall, gzip, whereis, dbcompat `rec_put`) — the
+  documented-not-fixed policy above.
+
+Baseline state after this pass: `ci/static-baseline/scanbuild.txt`
+regenerated from the post-fix tree with true `checker file` signatures
+— 211 signatures (the pre-fix inventory's 213 minus the two the fixes
+removed: the ex_cscope sizeof mismatch and the truncate division by
+zero; `Use-after-free nvi/common/exf.c` persists via the infeasible
+`file_init:432` report above, and `Function call with invalid argument
+cut.c` as the mbrlen-contract FP);
+`ci/static-baseline/gcc-analyzer.txt` unchanged (75/75 matched). The
+gate was verified green end-to-end (`ci/run-ci.sh --host static`) and
+verified to fail with `NEW FINDING` lines and exit 1 on a synthetic
+baseline deviation.
 
 ## Hardening status
 

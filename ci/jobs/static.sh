@@ -86,7 +86,7 @@ compare() {
     if [ "$UPDATE" = "1" ]; then
         cp "$_cur" "$_bpath"
         printf '=== %s: baseline updated (%s signatures)\n' \
-            "$_label" "$(wc -l < "$_base" | tr -d ' ')"
+            "$_label" "$(wc -l < "$_cur" | tr -d ' ')"
         return 0
     fi
 

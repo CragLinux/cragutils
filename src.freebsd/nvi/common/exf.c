@@ -630,7 +630,7 @@ file_cinit(SCR *sp)
 int
 file_end(SCR *sp, EXF *ep, int force)
 {
-	FREF *frp;
+	FREF *frp, *free_frp;
 
 	/*
 	 * !!!
@@ -658,6 +658,7 @@ file_end(SCR *sp, EXF *ep, int force)
 	frp->lno = sp->lno;
 	frp->cno = sp->cno;
 	F_SET(frp, FR_CURSORSET);
+	free_frp = NULL;
 
 	/*
 	 * We may no longer need the temporary backing file, so clean it
@@ -674,8 +675,13 @@ file_end(SCR *sp, EXF *ep, int force)
 		frp->tname = NULL;
 		if (F_ISSET(frp, FR_TMPFILE)) {
 			TAILQ_REMOVE(sp->gp->frefq, frp, q);
-			free(frp->name);
-			free(frp);
+			/*
+			 * Defer the free until after the db close attempt:
+			 * the close-failure message below still needs
+			 * frp->name, and freeing here left it reading
+			 * freed memory.
+			 */
+			free_frp = frp;
 		}
 		sp->frp = NULL;
 	}
@@ -688,7 +694,15 @@ file_end(SCR *sp, EXF *ep, int force)
 	if (ep->db->close != NULL && ep->db->close(ep->db) && !force) {
 		msgq_str(sp, M_SYSERR, frp->name, "241|%s: close");
 		++ep->refcnt;
+		if (free_frp != NULL) {
+			free(free_frp->name);
+			free(free_frp);
+		}
 		return (1);
+	}
+	if (free_frp != NULL) {
+		free(free_frp->name);
+		free(free_frp);
 	}
 
 	/* COMMITTED TO THE CLOSE.  THERE'S NO GOING BACK... */
