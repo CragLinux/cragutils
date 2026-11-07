@@ -697,7 +697,8 @@ getint(int *ip)
 		return (1);
 	rval = 0;
 	if (val < INT_MIN || val > INT_MAX) {
-		warnx("%s: %s", *gargv, strerror(ERANGE));
+		/* *gargv is NULL when the bad number was the last argument */
+		warnx("%s: %s", *gargv != NULL ? *gargv : "", strerror(ERANGE));
 		rval = 1;
 	}
 	*ip = (int)val;

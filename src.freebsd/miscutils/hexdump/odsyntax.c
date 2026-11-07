@@ -402,7 +402,7 @@ odformatint(char fchar, const char *fmt)
 	 * base 8. We need one extra space for signed numbers
 	 * to store the sign.
 	 */
-	n = (1ULL << (8 * isize)) - 1;
+	n = (isize >= 8) ? ~0ULL : (1ULL << (8 * isize)) - 1;
 	digits = 0;
 	while (n != 0) {
 		digits++;

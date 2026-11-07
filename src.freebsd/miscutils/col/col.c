@@ -446,7 +446,7 @@ flush_line(LINE *l)
 			    (unsigned)sizeof(int) * count_size)) == NULL)
 				err(1, NULL);
 		}
-		memset(count, 0, sizeof(int) * l->l_max_col + 1);
+		memset(count, 0, sizeof(int) * (size_t)(l->l_max_col + 1));
 		for (i = nchars, c = l->l_line; --i >= 0; c++)
 			count[c->c_column]++;
 

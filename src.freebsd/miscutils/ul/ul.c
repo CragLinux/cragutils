@@ -377,7 +377,7 @@ overstrike(void)
 			break;
 		}
 	putwchar('\r');
-	for (*cp=' '; *cp==' '; cp--)
+	for (*cp=' '; cp >= lbuf && *cp==' '; cp--)
 		*cp = 0;
 	for (cp=lbuf; *cp; cp++)
 		putwchar(*cp);
@@ -408,7 +408,7 @@ iattr(void)
 		case BOLD:	*cp++ = '!'; break;
 		default:	*cp++ = 'X'; break;
 		}
-	for (*cp=' '; *cp==' '; cp--)
+	for (*cp=' '; cp >= lbuf && *cp==' '; cp--)
 		*cp = 0;
 	for (cp=lbuf; *cp; cp++)
 		putwchar(*cp);

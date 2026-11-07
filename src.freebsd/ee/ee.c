@@ -4456,7 +4456,9 @@ spell_op(void)
 void 
 ispell_op(void)
 {
-	char template[128], *name;
+	/* static: tmp_file points into it and outlives this function */
+	static char template[128];
+	char *name;
 	char string[256];
 	int fd;
 
