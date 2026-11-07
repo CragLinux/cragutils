@@ -166,6 +166,41 @@ jobs:
       - name: replay corpora under MemorySanitizer
         run: sh ci/jobs/msan.sh
 
+  coverage:
+    name: coverage (llvm-cov)
+    runs-on: ubuntu-latest
+    container:
+      image: registry.fedoraproject.org/fedora:latest
+    steps:
+      - name: dependencies
+        run: |
+          dnf -y install --setopt=install_weak_deps=False \
+            clang compiler-rt llvm meson ninja-build \
+            pkgconf-pkg-config flex byacc bison libxo-devel \
+            ncurses-devel libedit-devel openssl-devel zlib-devel \
+            bzip2-devel xz-devel libzstd-devel libacl-devel \
+            libselinux-devel binutils file diffutils git which
+
+      - uses: actions/checkout@v4
+
+      # Non-gating for the percentages (see ci/jobs/coverage.sh): the
+      # per-tool numbers are a triage aid for regression-test gaps, not a
+      # threshold.  The job is gating for the build, the suite and the
+      # report generation itself.
+      - name: build, test, report coverage
+        env:
+          CC: clang
+          CXX: clang++
+        run: sh ci/jobs/coverage.sh | tee coverage-report.txt
+
+      - name: upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage-report.txt
+          if-no-files-found: ignore
+
   zig:
     name: zig (ReleaseSafe)
     runs-on: ubuntu-latest

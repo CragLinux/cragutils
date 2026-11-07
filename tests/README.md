@@ -49,10 +49,22 @@ t/00-smoke.sh       does each tool do its primary job?
 t/10-regress-patch.sh    patch(1) parser and apply defects
 t/11-regress-nvi.sh      nvi/vi/ex defects
 t/12-regress-tools.sh    coreutils, grep, ed, awk, hexdump, xargs, mcookie
-t/13-regress-parsers.sh  unvis, setmode, getdate, mktemp
+t/13-regress-parsers.sh  unvis, setmode, getdate, find, mktemp
+t/14-sandbox.sh          capsicum shim enforcement
+t/15-fetch-sandbox.sh    libfetch sandbox/broker
+t/16-regress-shell.sh    sh: parser, expansion, builtins, traps
+t/17-regress-telnet.sh   telnet: options, session, IAC negotiation
+t/18-regress-atf.sh      FreeBSD ATF/regression ports (sed, awk)
 t/20-fuzz-corpus.sh      replay saved fuzzer corpora and crashers
 data/crashers/<tool>/    inputs that once crashed a tool — permanent
 ```
+
+16–18 are the coverage-driven expansion (PLAN.md P0): llvm-cov over the
+suite showed sh, telnet and awk's interpreter were barely reached, and
+18 ports a subset of FreeBSD's own `usr.bin/sed/tests` and
+`usr.bin/awk/tests` cases (PLAN.md P0 extension) — inputs and expected
+outputs follow upstream, with portability notes where glibc/musl regex
+behaviour legitimately differs from FreeBSD's libc.
 
 ## Writing a test
 

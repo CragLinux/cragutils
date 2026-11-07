@@ -21,6 +21,7 @@
 #   fuzz        libFuzzer harnesses, corpus replay (FUZZ_TIME=N to fuzz)
 #   msan        MemorySanitizer build of the harnesses + corpus replay
 #   hardening   verify built binaries carry the expected mitigations
+#   coverage    clang source-based coverage (llvm-cov) over the suite
 #   zig         zig build (ReleaseSafe), smoke + full suite
 #
 # Options:
@@ -39,7 +40,7 @@ rebuild=0
 keep_going=0
 jobs=
 
-all_jobs="gcc clang musl sanitizers fuzz msan hardening zig"
+all_jobs="gcc clang musl sanitizers fuzz msan hardening coverage zig"
 
 while [ $# -gt 0 ]; do
     case $1 in
@@ -181,6 +182,14 @@ run_job() {
                     CC=gcc BUILD_DIR=build-ci-gcc sh "$srcdir/ci/jobs/build-test.sh"
                 BUILD_DIR=build-ci-gcc HARDENING_STRICT=${HARDENING_STRICT:-0} \
                     sh "$srcdir/ci/jobs/hardening-check.sh"
+            fi ;;
+        coverage)
+            if [ "$use_container" = "1" ]; then
+                build_image "$img_fedora" Containerfile.fedora
+                in_container "$img_fedora" 'sh ci/jobs/coverage.sh' \
+                    CC=clang CXX=clang++
+            else
+                CC=clang CXX=clang++ sh "$srcdir/ci/jobs/coverage.sh"
             fi ;;
         *)
             printf 'run-ci.sh: unknown job %s (see --list)\n' "$_job" >&2

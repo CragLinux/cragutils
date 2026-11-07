@@ -610,6 +610,37 @@ treat `/dev/stdout`/`/dev/stdin` as magic cookies — `fdopen(dup(fd))`
 in `stdopen()`/`zopen()`, never managed as a regular output file.
 Regression tests in `tests/t/12-regress-tools.sh`.
 
+## Coverage measurement (tests/ + ci/)
+
+clang source-based coverage over the suite (`ci/jobs/coverage.sh`, the
+`coverage` CI job) drives the regression-test expansion in `tests/t/16`
+– `18`. Two defects blocked measurement itself and are fixed here:
+
+- FIXED — `include/sys/cdefs.h`: `__cu_counted_by` misfired on clang 18.
+  clang 18 answers `__has_attribute(counted_by)` yes but accepts the
+  attribute only on flexible array members — the pointer form in
+  `libfetch/common.h` and `nvi/common/args.h` hard-errors. gcc 15 has
+  the same restriction (already guarded); the macro now requires
+  clang 19+. The annotation is a checking aid, so compiling it away is
+  behavior-neutral. Found by the first host build with Ubuntu 24.04's
+  clang 18 (CI's Fedora clang is newer, which hid it).
+- FIXED — sh exited through `_exit()` (`trap.c:exitshell_savedstatus`),
+  which skips atexit handlers: every coverage profile for the shell was
+  silently discarded (0-byte .profraw) and sh measured 0% while the
+  suite plainly ran it. The top-level shell process now exits through
+  `exit()` (the explicit flushall()/histsave() above make the stdio
+  effect identical); forked children keep `_exit()` because they share
+  the parent's stdio buffers. The same bypass would have hidden
+  exit-time sanitizer and leak-check output.
+
+Baseline → after the 16/17/18 expansion (line coverage of the
+security-relevant sources, suite-wide profile): telnet 0% → 20%, sh
+unmeasurable → 53%, awk 35% → 55%, sed 70% → 80%, patch 68% (mkpath.c
+0% covered by the new -p/mkdir cases), getdate/find 42% → 42%+ (function.c
+operator table lifted). Remaining thin spots, deliberately left for a
+later pass: nvi's full-screen vi paths (vs_smap.c — needs a pty driver),
+fetch's ftp.c (no FTP server in the harness), nvi/ex command breadth.
+
 ## Remediation approach (Phase 3)
 
 - Confirmed risky `strcpy`/`strcat`/`sprintf`/`strncpy` call sites get
@@ -1029,7 +1060,8 @@ LOW / ACCEPTED (race exists, no boundary crossed):
   `-fsanitize=bounds,object-size` with `-fsanitize-minimal-runtime
   -fsanitize-trap=bounds,object-size`.
 - `__counted_by` adoption (incremental): macro `__cu_counted_by` in
-  `include/sys/cdefs.h` (empty on pre-clang-18/gcc-15). Annotated so far:
+  `include/sys/cdefs.h` (empty except on clang 19+; see "Coverage
+  measurement"). Annotated so far:
   - `struct fetchconn.buf` (libfetch, network-facing) — `bufsize` is a true
     capacity member.
   - `ARGS.bp` (nvi) — `blen` capacity member.

@@ -51,10 +51,13 @@ any of them, and every later item on this list needs somewhere to run.
       philosophy): the same scripts run locally and in GitHub Actions.
 - [x] CI jobs: glibc+gcc, glibc+clang, musl (Alpine), ASan+UBSan test
       run, fuzz regression, hardening-flag verification.
-- [ ] Extend coverage by porting a subset of FreeBSD's ATF tests
-      (`usr.bin/*/tests`) for the tools carrying the most patches.
-- [ ] Coverage reporting (llvm-cov) over the suite, to find which
-      patched code paths the regression tests still do not reach.
+- [x] Extend coverage by porting a subset of FreeBSD's ATF tests
+      (`usr.bin/*/tests`) for the tools carrying the most patches
+      (tests/t/18-regress-atf.sh: sed regress + sed2 ATF cases, awk
+      bug-fix cases).
+- [x] Coverage reporting (llvm-cov) over the suite, to find which
+      patched code paths the regression tests still do not reach
+      (`ci/jobs/coverage.sh`, the `coverage` CI job).
 
 The first run of this pipeline found five defects, four of them fixed in
 the same pass (see SECURITY-FINDINGS.md, "Regression-suite findings"):

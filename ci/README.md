@@ -32,6 +32,7 @@ they are cached by podman.
 | `fuzz` | builds the libFuzzer harnesses, replays every corpus |
 | `msan` | MemorySanitizer build of the harnesses + corpus replay |
 | `hardening` | checks built binaries carry the expected mitigations |
+| `coverage` | clang source-based coverage (llvm-cov) over the suite |
 | `zig` | zig build (ReleaseSafe), smoke tests + full suite |
 
 `sanitizers` is the job most likely to find something new: it drives the
@@ -43,6 +44,34 @@ ran.
 `musl` matters more than its position in the list suggests. glibc hides
 bugs that musl does not — `printf("%s", NULL)` prints `(null)` on glibc
 and segfaults on musl, and locale and regex behaviour differ.
+
+## Coverage job
+
+`ci/jobs/coverage.sh` builds with clang source-based coverage
+(`-fprofile-instr-generate -fcoverage-mapping`), runs the functional
+suite, and reports per-tool line coverage with `llvm-cov report` for the
+sources carrying security fixes (patch, nvi, telnet, fetch/libfetch, awk,
+sed, sh, unvis/vis, setmode, getdate). It answers "which patched code
+paths do the regression tests still not reach?" — the question PLAN.md
+P0 leaves open.
+
+Gating policy: the job is **gating** for the build, the suite and the
+report itself (any of those failing fails CI), and **non-gating** for the
+percentages — there is deliberately no coverage threshold. The numbers
+are a triage aid, not a quality gate: a drop in a percentage never fails
+a run; a failing test does. `REPORT_ONLY=1` re-reports an existing
+profile directory without rebuilding, for before/after comparisons.
+
+Two portability fixes fell out of measuring coverage and are worth
+knowing about when running the job on new hosts:
+
+- `include/sys/cdefs.h` enables pointer-form `counted_by` only on
+  clang 19+ (clang 18, e.g. Ubuntu 24.04's, probes the attribute as
+  supported but hard-errors on the pointer form).
+- `sh` exits through `exit()` in the top-level shell process
+  (`trap.c:exitshell_savedstatus`), because coverage profiles are
+  written from an atexit handler and the historical `_exit()` discarded
+  every counter — sh measured 0% while obviously running.
 
 ## Images
 
