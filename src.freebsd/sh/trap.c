@@ -546,5 +546,17 @@ exitshell_savedstatus(void)
 		kill(getpid(), sig);
 		/* If the default action is to ignore, fall back to _exit(). */
 	}
+	/*
+	 * In the top-level shell process exit() rather than _exit(): the
+	 * flushall()/histsave() above make the stdio effect the same, and
+	 * running the atexit handlers is what lets exit-time
+	 * instrumentation see the shell at all — coverage profiles are
+	 * written from an atexit handler, so _exit() silently discarded
+	 * every counter and the suite measured sh at 0%.  Forked children
+	 * keep _exit(): they share the parent's stdio buffers and must
+	 * not flush them a second time.
+	 */
+	if (rootshell)
+		exit(exiting_exitstatus);
 	_exit(exiting_exitstatus);
 }
