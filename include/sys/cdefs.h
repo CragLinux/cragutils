@@ -65,7 +65,14 @@
  * aid with no semantic effect, so compiling it away is always safe.
  */
 #if defined(__has_attribute) && defined(__clang__)
-#if __has_attribute(counted_by)
+/*
+ * counted_by on plain pointer fields needs clang 20+: clang 18/19 answer
+ * __has_attribute(counted_by) but accept it only on flexible array
+ * members, hard-erroring on pointers (the only form we use).  Gate on
+ * the major version too; where the gate fails the annotation compiles
+ * away, which is safe (checking aid, no semantic effect).
+ */
+#if __has_attribute(counted_by) && __clang_major__ >= 20
 #define __cu_counted_by(x) __attribute__((counted_by(x)))
 #endif
 #endif
