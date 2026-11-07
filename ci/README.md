@@ -46,11 +46,19 @@ ran.
 bugs that musl does not — `printf("%s", NULL)` prints `(null)` on glibc
 and segfaults on musl, and locale and regex behaviour differ.
 
-`static` gates on *new* analyzer findings rather than raw counts: each
-warning is normalized to a `checker file` signature and compared against
-`ci/static-baseline/`; the verdicts for every known signature live in
-`SECURITY-FINDINGS.md`. `STATIC_BASELINE_UPDATE=1` regenerates the lists
-after a deliberate toolchain bump; triage the delta before committing it.
+`static` gates on *new* analyzer findings rather than raw counts: every
+warning is normalized to a signature — `checker file` for scan-build,
+`flag file` for gcc `-fanalyzer` — sorted, and compared line-for-line
+against `ci/static-baseline/scanbuild.txt` and `gcc-analyzer.txt`; the
+verdict for every baseline signature lives in `SECURITY-FINDINGS.md`.
+A signature present in the run but not in the baseline is a NEW
+finding and fails the job; baseline signatures that no longer fire are
+reported as resolved so the lists can be tightened.
+`STATIC_BASELINE=0` analyzes and reports without gating;
+`STATIC_BASELINE_UPDATE=1` regenerates the lists after a deliberate
+toolchain bump or a triaged new finding — triage the delta before
+committing it, and only regenerate once every new signature carries a
+verdict.
 
 ## Coverage job
 

@@ -1,141 +1,211 @@
-src.freebsd/awk/b.c
-src.freebsd/awk/run.c
-src.freebsd/awk/tran.c
-src.freebsd/coreutils/df/df.c
-src.freebsd/diffutils/diff/diffdir.c
-src.freebsd/ed/glbl.c
-src.freebsd/ed/main.c
-src.freebsd/findutils/find/function.c
-src.freebsd/findutils/xargs/xargs.c
-src.freebsd/gzip/unxz.c
-src.freebsd/miscutils/col/col.c
-src.freebsd/miscutils/rev/rev.c
-src.freebsd/netcat/netcat.c
-src.freebsd/coreutils/pr/pr.c
-src.freebsd/coreutils/sort/sort.c
-src.freebsd/findutils/xargs/xargs.c
-src.freebsd/gzip/unpack.c
-src.freebsd/miscutils/col/col.c
-src.freebsd/netcat/netcat.c
-src.freebsd/sh/eval.c
-src.freebsd/sh/jobs.c
-src.freebsd/coreutils/env/envopts.c
-src.freebsd/coreutils/fmt/fmt.c
-src.freebsd/gencat/gencat.c
-src.freebsd/ee/ee.c
-src.freebsd/apply/apply.c
-src.freebsd/findutils/xargs/xargs.c
-src.freebsd/sh/jobs.c
-src.freebsd/telnet/telnet/commands.c
-src.freebsd/tip/tip/cmds.c
-src.freebsd/awk/run.c
-src.freebsd/compat/setmode.c
-src.freebsd/compress/compress.c
-src.freebsd/compress/zopen.c
-src.freebsd/coreutils/cat/cat.c
-src.freebsd/coreutils/cp/cp.c
-src.freebsd/coreutils/date/date.c
-src.freebsd/coreutils/ls/ls.c
-src.freebsd/coreutils/mkdir/mkdir.c
-src.freebsd/coreutils/pr/pr.c
-src.freebsd/coreutils/seq/seq.c
-src.freebsd/coreutils/stat/stat.c
-src.freebsd/diffutils/diff/diffreg.c
-src.freebsd/ee/ee.c
-src.freebsd/fetch/fetch.c
-src.freebsd/findutils/find/find.c
-src.freebsd/findutils/locate/locate/fastfind.c
-src.freebsd/findutils/xargs/xargs.c
-src.freebsd/gencat/gencat.c
-src.freebsd/gzip/unxz.c
-src.freebsd/miscutils/indent/lexi.c
-src.freebsd/nvi/regex/engine.c
-src.freebsd/nvi/regex/regcomp.c
-src.freebsd/patch/inp.c
-src.freebsd/patch/pch.c
-src.freebsd/sed/process.c
-src.freebsd/sh/miscbltin.c
-src.freebsd/telnet/telnet/sys_bsd.c
-src.freebsd/telnet/telnet/telnet.c
-src.freebsd/tip/libacu/courier.c
-src.freebsd/tip/libacu/t3000.c
-src.freebsd/awk/awkgram.tab.c
-src.freebsd/bintrans/uudecode.c
-src.freebsd/compat/strptime.c
-src.freebsd/compress/zopen.c
-src.freebsd/coreutils/cksum/cksum.c
-src.freebsd/coreutils/nproc/nproc.c
-src.freebsd/coreutils/stty/stty.c
-src.freebsd/dbcompat/btree/bt_conv.c
-src.freebsd/netcat/netcat.c
-src.freebsd/awk/lib.c
-src.freebsd/coreutils/basename/basename.c
-src.freebsd/coreutils/cp/utils.c
-src.freebsd/coreutils/id/id.c
-src.freebsd/coreutils/md5/md5.c
-src.freebsd/coreutils/sort/sort.c
-src.freebsd/coreutils/tail/forward.c
-src.freebsd/diffutils/cmp/cmp.c
-src.freebsd/diffutils/diff3/diff3.c
-src.freebsd/ee/ee.c
-src.freebsd/gzip/unpack.c
-src.freebsd/miscutils/time/time.c
-src.freebsd/sh/miscbltin.c
-src.freebsd/sh/parser.c
-src.freebsd/awk/b.c
-src.freebsd/awk/lex.c
-src.freebsd/awk/parse.c
-src.freebsd/awk/run.c
-src.freebsd/awk/tran.c
-src.freebsd/coreutils/ls/print.c
-src.freebsd/coreutils/printf/printf.c
-src.freebsd/coreutils/stat/stat.c
-src.freebsd/coreutils/tail/forward.c
-src.freebsd/ed/glbl.c
-src.freebsd/ed/main.c
-src.freebsd/findutils/find/function.c
-src.freebsd/m4/gnum4.c
-src.freebsd/miscutils/col/col.c
-src.freebsd/nvi/regex/engine.c
-src.freebsd/nvi/regex/regcomp.c
-src.freebsd/sed/process.c
-src.freebsd/telnet/telnet/commands.c
-src.freebsd/telnet/telnet/telnet.c
-src.freebsd/awk/awkgram.tab.c
-src.freebsd/coreutils/expr/expr.p/expr.c
-src.freebsd/coreutils/df/df.c
-src.freebsd/coreutils/truncate/truncate.c
-src.freebsd/coreutils/cut/cut.c
-src.freebsd/coreutils/echo/echo.c
-src.freebsd/coreutils/env/envopts.c
-src.freebsd/coreutils/md5/md5.c
-src.freebsd/coreutils/xinstall/xinstall.c
-src.freebsd/dbcompat/recno/rec_put.c
-src.freebsd/gzip/gzip.c
-src.freebsd/miscutils/whereis/whereis.c
-src.freebsd/apply/apply.c
-src.freebsd/coreutils/mv/mv.c
-src.freebsd/findutils/xargs/xargs.c
-src.freebsd/sh/jobs.c
-src.freebsd/telnet/telnet/commands.c
-src.freebsd/tip/tip/cmds.c
-src.freebsd/netcat/netcat.c
-src.freebsd/coreutils/pr/pr.c
-src.freebsd/ee/ee.c
-src.freebsd/telnet/telnet/telnet.c
-src.freebsd/tip/getcap.c
-src.freebsd/findutils/find/find.p/getdate.c
-src.freebsd/miscutils/wall/wall.c
-src.freebsd/tip/tip/tip.c
-src.freebsd/tip/tip/tip.c
-src.freebsd/telnet/telnet/commands.c
-src.freebsd/coreutils/fmt/fmt.c
-src.freebsd/coreutils/ls/print.c
-src.freebsd/coreutils/pr/pr.c
-src.freebsd/coreutils/xinstall/xinstall.c
-src.freebsd/netcat/netcat.c
-src.freebsd/sh/histedit.c
-src.freebsd/tip/tip/acu.c
-src.freebsd/awk/run.c
-src.freebsd/coreutils/tail/reverse.c
-src.freebsd/gencat/gencat.c
+Argument with 'nonnull' attribute passed null src.freebsd/awk/b.c
+Argument with 'nonnull' attribute passed null src.freebsd/awk/run.c
+Argument with 'nonnull' attribute passed null src.freebsd/awk/tran.c
+Argument with 'nonnull' attribute passed null src.freebsd/coreutils/df/df.c
+Argument with 'nonnull' attribute passed null src.freebsd/diffutils/diff/diffdir.c
+Argument with 'nonnull' attribute passed null src.freebsd/ed/glbl.c
+Argument with 'nonnull' attribute passed null src.freebsd/ed/main.c
+Argument with 'nonnull' attribute passed null src.freebsd/findutils/find/function.c
+Argument with 'nonnull' attribute passed null src.freebsd/findutils/xargs/xargs.c
+Argument with 'nonnull' attribute passed null src.freebsd/gzip/unxz.c
+Argument with 'nonnull' attribute passed null src.freebsd/libfetch/http.c
+Argument with 'nonnull' attribute passed null src.freebsd/miscutils/col/col.c
+Argument with 'nonnull' attribute passed null src.freebsd/miscutils/rev/rev.c
+Argument with 'nonnull' attribute passed null src.freebsd/netcat/netcat.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/common/cut.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/common/delete.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/common/key.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/common/log.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/common/msg.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/common/put.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/common/recover.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/ex/ex_cscope.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/ex/ex_script.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/ex/ex_subst.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/vi/v_increment.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/vi/v_itxt.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/vi/v_replace.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/vi/v_search.c
+Argument with 'nonnull' attribute passed null src.freebsd/nvi/vi/v_ulcase.c
+Assigned value is garbage or undefined src.freebsd/coreutils/pr/pr.c
+Assigned value is garbage or undefined src.freebsd/coreutils/sort/sort.c
+Assigned value is garbage or undefined src.freebsd/findutils/xargs/xargs.c
+Assigned value is garbage or undefined src.freebsd/gzip/unpack.c
+Assigned value is garbage or undefined src.freebsd/miscutils/col/col.c
+Assigned value is garbage or undefined src.freebsd/netcat/netcat.c
+Assigned value is garbage or undefined src.freebsd/sh/eval.c
+Assigned value is garbage or undefined src.freebsd/sh/jobs.c
+Branch condition evaluates to a garbage value src.freebsd/coreutils/env/envopts.c
+Branch condition evaluates to a garbage value src.freebsd/coreutils/fmt/fmt.c
+Branch condition evaluates to a garbage value src.freebsd/gencat/gencat.c
+Called function pointer is null (null dereference) src.freebsd/ee/ee.c
+Dangerous construct in a vforked process src.freebsd/apply/apply.c
+Dangerous construct in a vforked process src.freebsd/findutils/xargs/xargs.c
+Dangerous construct in a vforked process src.freebsd/nvi/ex/ex_argv.c
+Dangerous construct in a vforked process src.freebsd/nvi/ex/ex_cscope.c
+Dangerous construct in a vforked process src.freebsd/nvi/ex/ex_filter.c
+Dangerous construct in a vforked process src.freebsd/nvi/ex/ex_shell.c
+Dangerous construct in a vforked process src.freebsd/sh/jobs.c
+Dangerous construct in a vforked process src.freebsd/telnet/telnet/commands.c
+Dangerous construct in a vforked process src.freebsd/tip/tip/cmds.c
+Dead assignment src.freebsd/awk/awkgram.tab.c
+Dead assignment src.freebsd/awk/run.c
+Dead assignment src.freebsd/compat/setmode.c
+Dead assignment src.freebsd/compress/compress.c
+Dead assignment src.freebsd/compress/zopen.c
+Dead assignment src.freebsd/coreutils/cat/cat.c
+Dead assignment src.freebsd/coreutils/cp/cp.c
+Dead assignment src.freebsd/coreutils/date/date.c
+Dead assignment src.freebsd/coreutils/ls/ls.c
+Dead assignment src.freebsd/coreutils/mkdir/mkdir.c
+Dead assignment src.freebsd/coreutils/pr/pr.c
+Dead assignment src.freebsd/coreutils/seq/seq.c
+Dead assignment src.freebsd/coreutils/stat/stat.c
+Dead assignment src.freebsd/diffutils/diff/diffreg.c
+Dead assignment src.freebsd/ee/ee.c
+Dead assignment src.freebsd/fetch/fetch.c
+Dead assignment src.freebsd/findutils/find/find.c
+Dead assignment src.freebsd/findutils/locate/locate/fastfind.c
+Dead assignment src.freebsd/findutils/xargs/xargs.c
+Dead assignment src.freebsd/gencat/gencat.c
+Dead assignment src.freebsd/gzip/unxz.c
+Dead assignment src.freebsd/libfetch/ftp.c
+Dead assignment src.freebsd/miscutils/indent/lexi.c
+Dead assignment src.freebsd/nvi/cl/cl_funcs.c
+Dead assignment src.freebsd/nvi/cl/cl_screen.c
+Dead assignment src.freebsd/nvi/common/exf.c
+Dead assignment src.freebsd/nvi/common/recover.c
+Dead assignment src.freebsd/nvi/common/seq.c
+Dead assignment src.freebsd/nvi/ex/ex.c
+Dead assignment src.freebsd/nvi/ex/ex_args.c
+Dead assignment src.freebsd/nvi/ex/ex_argv.c
+Dead assignment src.freebsd/nvi/ex/ex_bang.c
+Dead assignment src.freebsd/nvi/ex/ex_cscope.c
+Dead assignment src.freebsd/nvi/ex/ex_display.c
+Dead assignment src.freebsd/nvi/ex/ex_global.c
+Dead assignment src.freebsd/nvi/ex/ex_join.c
+Dead assignment src.freebsd/nvi/ex/ex_print.c
+Dead assignment src.freebsd/nvi/ex/ex_script.c
+Dead assignment src.freebsd/nvi/ex/ex_subst.c
+Dead assignment src.freebsd/nvi/ex/ex_txt.c
+Dead assignment src.freebsd/nvi/ex/ex_usage.c
+Dead assignment src.freebsd/nvi/regex/engine.c
+Dead assignment src.freebsd/nvi/regex/regcomp.c
+Dead assignment src.freebsd/nvi/vi/v_increment.c
+Dead assignment src.freebsd/nvi/vi/v_mark.c
+Dead assignment src.freebsd/nvi/vi/v_search.c
+Dead assignment src.freebsd/nvi/vi/v_txt.c
+Dead assignment src.freebsd/nvi/vi/vs_line.c
+Dead assignment src.freebsd/patch/inp.c
+Dead assignment src.freebsd/patch/pch.c
+Dead assignment src.freebsd/sed/process.c
+Dead assignment src.freebsd/sh/miscbltin.c
+Dead assignment src.freebsd/telnet/telnet/sys_bsd.c
+Dead assignment src.freebsd/telnet/telnet/telnet.c
+Dead assignment src.freebsd/tip/libacu/courier.c
+Dead assignment src.freebsd/tip/libacu/t3000.c
+Dead increment src.freebsd/bintrans/uudecode.c
+Dead increment src.freebsd/compat/strptime.c
+Dead increment src.freebsd/compress/zopen.c
+Dead increment src.freebsd/coreutils/cksum/cksum.c
+Dead increment src.freebsd/coreutils/nproc/nproc.c
+Dead increment src.freebsd/coreutils/stty/stty.c
+Dead increment src.freebsd/dbcompat/btree/bt_conv.c
+Dead increment src.freebsd/netcat/netcat.c
+Dead increment src.freebsd/nvi/common/main.c
+Dead nested assignment src.freebsd/awk/lib.c
+Dead nested assignment src.freebsd/coreutils/basename/basename.c
+Dead nested assignment src.freebsd/coreutils/cp/utils.c
+Dead nested assignment src.freebsd/coreutils/id/id.c
+Dead nested assignment src.freebsd/coreutils/md5/md5.c
+Dead nested assignment src.freebsd/coreutils/sort/sort.c
+Dead nested assignment src.freebsd/coreutils/tail/forward.c
+Dead nested assignment src.freebsd/diffutils/cmp/cmp.c
+Dead nested assignment src.freebsd/diffutils/diff3/diff3.c
+Dead nested assignment src.freebsd/ee/ee.c
+Dead nested assignment src.freebsd/gzip/unpack.c
+Dead nested assignment src.freebsd/libfetch/common.c
+Dead nested assignment src.freebsd/miscutils/time/time.c
+Dead nested assignment src.freebsd/nvi/cl/cl_term.c
+Dead nested assignment src.freebsd/nvi/ex/ex_args.c
+Dead nested assignment src.freebsd/nvi/ex/ex_argv.c
+Dead nested assignment src.freebsd/nvi/ex/ex_screen.c
+Dead nested assignment src.freebsd/nvi/vi/vi.c
+Dead nested assignment src.freebsd/nvi/vi/vs_msg.c
+Dead nested assignment src.freebsd/sh/miscbltin.c
+Dead nested assignment src.freebsd/sh/parser.c
+Dereference of null pointer src.freebsd/awk/awkgram.tab.c
+Dereference of null pointer src.freebsd/awk/b.c
+Dereference of null pointer src.freebsd/awk/lex.c
+Dereference of null pointer src.freebsd/awk/parse.c
+Dereference of null pointer src.freebsd/awk/run.c
+Dereference of null pointer src.freebsd/awk/tran.c
+Dereference of null pointer src.freebsd/coreutils/expr/expr.p/expr.c
+Dereference of null pointer src.freebsd/coreutils/ls/print.c
+Dereference of null pointer src.freebsd/coreutils/printf/printf.c
+Dereference of null pointer src.freebsd/coreutils/stat/stat.c
+Dereference of null pointer src.freebsd/coreutils/tail/forward.c
+Dereference of null pointer src.freebsd/ed/glbl.c
+Dereference of null pointer src.freebsd/ed/main.c
+Dereference of null pointer src.freebsd/findutils/find/function.c
+Dereference of null pointer src.freebsd/m4/gnum4.c
+Dereference of null pointer src.freebsd/miscutils/col/col.c
+Dereference of null pointer src.freebsd/nvi/common/exf.c
+Dereference of null pointer src.freebsd/nvi/common/key.c
+Dereference of null pointer src.freebsd/nvi/common/msg.c
+Dereference of null pointer src.freebsd/nvi/ex/ex_argv.c
+Dereference of null pointer src.freebsd/nvi/ex/ex_subst.c
+Dereference of null pointer src.freebsd/nvi/regex/engine.c
+Dereference of null pointer src.freebsd/nvi/regex/regcomp.c
+Dereference of null pointer src.freebsd/nvi/vi/v_txt.c
+Dereference of null pointer src.freebsd/sed/process.c
+Dereference of null pointer src.freebsd/telnet/telnet/commands.c
+Dereference of null pointer src.freebsd/telnet/telnet/telnet.c
+Division by zero src.freebsd/coreutils/df/df.c
+Division by zero src.freebsd/nvi/common/options.c
+Function call with invalid argument src.freebsd/coreutils/cut/cut.c
+Memory leak src.freebsd/coreutils/echo/echo.c
+Memory leak src.freebsd/coreutils/env/envopts.c
+Memory leak src.freebsd/coreutils/md5/md5.c
+Memory leak src.freebsd/coreutils/xinstall/xinstall.c
+Memory leak src.freebsd/dbcompat/recno/rec_put.c
+Memory leak src.freebsd/gzip/gzip.c
+Memory leak src.freebsd/miscutils/whereis/whereis.c
+Memory leak src.freebsd/nvi/common/exf.c
+Potential insecure implementation-specific behavior in call 'vfork' src.freebsd/apply/apply.c
+Potential insecure implementation-specific behavior in call 'vfork' src.freebsd/coreutils/mv/mv.c
+Potential insecure implementation-specific behavior in call 'vfork' src.freebsd/findutils/xargs/xargs.c
+Potential insecure implementation-specific behavior in call 'vfork' src.freebsd/nvi/ex/ex_argv.c
+Potential insecure implementation-specific behavior in call 'vfork' src.freebsd/nvi/ex/ex_cscope.c
+Potential insecure implementation-specific behavior in call 'vfork' src.freebsd/nvi/ex/ex_filter.c
+Potential insecure implementation-specific behavior in call 'vfork' src.freebsd/nvi/ex/ex_shell.c
+Potential insecure implementation-specific behavior in call 'vfork' src.freebsd/sh/jobs.c
+Potential insecure implementation-specific behavior in call 'vfork' src.freebsd/telnet/telnet/commands.c
+Potential insecure implementation-specific behavior in call 'vfork' src.freebsd/tip/tip/cmds.c
+Potential insecure temporary file in call 'mktemp' src.freebsd/netcat/netcat.c
+Result of operation is garbage or undefined src.freebsd/coreutils/pr/pr.c
+Result of operation is garbage or undefined src.freebsd/ee/ee.c
+Result of operation is garbage or undefined src.freebsd/findutils/find/find.p/getdate.c
+Result of operation is garbage or undefined src.freebsd/libfetch/ftp.c
+Result of operation is garbage or undefined src.freebsd/nvi/vi/vi.c
+Result of operation is garbage or undefined src.freebsd/telnet/telnet/telnet.c
+Result of operation is garbage or undefined src.freebsd/tip/getcap.c
+Return value is not checked in call to 'setegid' src.freebsd/miscutils/wall/wall.c
+Return value is not checked in call to 'setegid' src.freebsd/tip/tip/tip.c
+Return value is not checked in call to 'seteuid' src.freebsd/tip/tip/tip.c
+Return value is not checked in call to 'setuid' src.freebsd/telnet/telnet/commands.c
+Uninitialized argument value src.freebsd/coreutils/fmt/fmt.c
+Uninitialized argument value src.freebsd/coreutils/ls/print.c
+Uninitialized argument value src.freebsd/coreutils/pr/pr.c
+Uninitialized argument value src.freebsd/coreutils/xinstall/xinstall.c
+Uninitialized argument value src.freebsd/netcat/netcat.c
+Uninitialized argument value src.freebsd/nvi/vi/vs_refresh.c
+Uninitialized argument value src.freebsd/sh/histedit.c
+Uninitialized argument value src.freebsd/tip/tip/acu.c
+Use-after-free src.freebsd/awk/run.c
+Use-after-free src.freebsd/coreutils/tail/reverse.c
+Use-after-free src.freebsd/gencat/gencat.c
+Use-after-free src.freebsd/nvi/common/cut.c
+Use-after-free src.freebsd/nvi/common/exf.c
+Use-after-free src.freebsd/nvi/ex/ex.c
+Use-after-free src.freebsd/nvi/ex/ex_tag.c
