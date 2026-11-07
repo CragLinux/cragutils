@@ -206,6 +206,26 @@ if require "sed" sed; then
     # g/G must treat it as empty, matching what x already special-cased.
     assert_out "sed g with untouched hold space" "" sh -c "echo a | $(tool sed) 'g'"
     assert_out "sed G with untouched hold space" "a" sh -c "echo a | $(tool sed) 'G'"
+
+    # regsub() formed its destination as sp->space + sp->len on a
+    # never-used substitute space (space == NULL, len == 0) -- a zero
+    # offset from NULL is UB (UBSan: process.c:720), hit by the first
+    # substitution of every run.  These pin the regsub output paths
+    # (&, backrefs, repeated matches, zero-width matches); behaviour
+    # is unchanged and the sanitizers job is where the UB itself is
+    # caught.
+    assert_out "sed substitute with & expansion" "bb" \
+        sh -c "echo b | $(tool sed) 's/b/&b/'"
+    assert_out "sed substitute with a backref" "b" \
+        sh -c "echo ab | $(tool sed) 's/\\(a\\)\\(b\\)/\\2/'"
+    assert_out "sed global substitute" "b b" \
+        sh -c "printf 'a a\\n' | $(tool sed) 's/a/b/g'"
+    assert_out "sed two substitutions in one script" "c" \
+        sh -c "echo a | $(tool sed) -e 's/a/b/' -e 's/b/c/'"
+    assert_out "sed substitute with zero-width matches" "-a-b-" \
+        sh -c "echo ab | $(tool sed) 's/x*/-/g'"
+    assert_out "sed repeated & expansion" "foooo" \
+        sh -c "echo foo | $(tool sed) 's/o/&&/g'"
 fi
 
 group "compress: -c to stdout on Linux (/dev/stdout magic cookie)"
@@ -267,6 +287,77 @@ if require "fetch" fetch; then
     assert_out "no mode clone through symlink" "600" \
         stat -c '%a' fout
     assert_out "symlink target left intact" "target" cat ftgt.txt
+fi
+
+group "fetch: integer overflow in Content-Length/Content-Range parsing"
+
+# libfetch accumulated the decimal value of Content-Length and the
+# Content-Range bounds with plain off_t multiply-and-add, so hostile
+# headers overflowed (UBSan signed-integer overflow; values like
+# 26666666666667666666 wrap mid-accumulation), and `last - first + 1`
+# overflowed for a range ending at OFF_MAX.  The parsers now reject
+# unrepresentable values and leave the length unknown (-1), so fetch
+# falls back to read-to-EOF.  Observable pin: a huge header value must
+# not crash, hang, or corrupt the received body (the UB itself is
+# caught by the sanitizers job).
+if require "fetch" fetch && have_host python3; then
+    mkdir -p hsrv
+    # unique port per run: parallel suites must not collide
+    hport=$((19000 + ($$ % 2000)))
+    cat > hsrv/server.py <<EOF
+import http.server
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        body = b'hello'
+        if self.path == '/biglen':
+            self.wfile.write(b'HTTP/1.1 200 OK\r\nContent-Length: 26666666666667666666\r\n\r\n' + body)
+            return
+        if self.path == '/trunc':
+            # 2^64 + 5: wraps to a believed length of 5
+            self.wfile.write(b'HTTP/1.1 200 OK\r\nContent-Length: 18446744073709551621\r\n\r\nhellohello')
+            return
+        if self.path == '/bigrange':
+            self.wfile.write(b'HTTP/1.1 206 Partial Content\r\n'
+                b'Content-Range: bytes 0-9223372036854775807/9223372036854775807\r\n'
+                b'Content-Length: 5\r\n\r\n' + body)
+            return
+        self.send_response(200)
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+    def log_message(self, *a):
+        pass
+http.server.HTTPServer(('127.0.0.1', $hport), H).serve_forever()
+EOF
+    python3 hsrv/server.py &
+    hsrv_pid=$!
+    trap 'kill $hsrv_pid 2>/dev/null' EXIT
+    sleep 1
+
+    assert_ok "fetch with a sane Content-Length" \
+        "$(tool fetch)" -q -o ok.out http://127.0.0.1:$hport/ok
+    assert_out "sane body received" "hello" "$(tool cat)" ok.out
+
+    assert_no_crash "fetch with an overflowing Content-Length" \
+        "$(tool fetch)" -q -o biglen.out http://127.0.0.1:$hport/biglen
+    assert_out "body intact past a bogus Content-Length" "hello" \
+        "$(tool cat)" biglen.out
+
+    # pre-fix the wrapped value was used as the believed length: a
+    # 2^64+5 header made fetch truncate a 10-byte body to 5 bytes and
+    # exit 0 -- a silent, undetectable response truncation.
+    assert_ok "fetch treats a wrapping Content-Length as unknown" \
+        "$(tool fetch)" -q -o trunc.out http://127.0.0.1:$hport/trunc
+    assert_out "no silent truncation past a wrapping Content-Length" \
+        "hellohello" "$(tool cat)" trunc.out
+
+    assert_no_crash "fetch with an overflowing Content-Range" \
+        "$(tool fetch)" -q -o bigrange.out http://127.0.0.1:$hport/bigrange
+    assert_out "body intact past a bogus Content-Range" "hello" \
+        "$(tool cat)" bigrange.out
+
+    kill $hsrv_pid 2>/dev/null
+    trap - EXIT
 fi
 
 cu_finish
