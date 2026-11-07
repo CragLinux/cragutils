@@ -105,6 +105,37 @@ if require "find" find; then
     done
 fi
 
+group "find: operator evaluation (via the getdate binary)"
+
+# Coverage supplement: function.c's operator table was nearly untouched
+# (12% lines) even though find is the getdate host.  Straightforward
+# POSIX operator cases; -newermt here also keeps the getdate paths warm.
+if require "find operators" find; then
+    mkdir -p tree/sub
+    : > tree/a.txt
+    : > tree/b.log
+    : > tree/sub/c.txt
+
+    assert_out "-name finds by glob" "$(printf 'tree/a.txt\ntree/sub/c.txt')" \
+        sh -c "$(tool find) tree -name '*.txt' | $(tool sort)"
+    assert_out "-name with -type f" "$(printf 'tree/a.txt\ntree/sub/c.txt')" \
+        sh -c "$(tool find) tree -name '*.txt' -type f | $(tool sort)"
+    assert_out "-type d finds directories" "$(printf 'tree\ntree/sub')" \
+        sh -c "$(tool find) tree -type d | $(tool sort)"
+    assert_out "-o alternation" "$(printf 'tree/a.txt\ntree/b.log\ntree/sub/c.txt')" \
+        sh -c "$(tool find) tree -name '*.txt' -o -name '*.log' | $(tool sort)"
+    assert_out "! negation" "tree/b.log" \
+        sh -c "$(tool find) tree -type f ! -name '*.txt' | $(tool sort)"
+    assert_out "-size filters" "" \
+        sh -c "$(tool find) tree -type f -size +100c"
+    assert_out "-exec runs the command" "c.txt" \
+        sh -c "$(tool find) tree -name 'c.txt' -exec basename {} ';'"
+    assert_out "-prune stops descent" "tree" \
+        sh -c "$(tool find) tree -name sub -prune -o -type d -print | $(tool sort)"
+    assert_out "-newermt still parses dates" "1" \
+        sh -c "$(tool find) tree -maxdepth 0 -newermt '2000-01-01' | wc -l | tr -d ' '"
+fi
+
 group "mktemp: padchar indexed with its NUL"
 
 # _gettemp() used sizeof(padchar) including the terminator, planting '\0'

@@ -16,6 +16,7 @@ test(
         '--build', meson.project_build_root(),
         '--quiet',
         '00-smoke', '10-regress', '11-regress', '12-regress', '13-regress',
+        '16-regress', '17-regress', '18-regress',
     ],
     suite: 'functional',
     timeout: 600,

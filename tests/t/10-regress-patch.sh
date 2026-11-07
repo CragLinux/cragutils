@@ -196,4 +196,78 @@ assert_ok "applies a valid context diff" "$PATCH" -t -i goodc.diff goodc.txt
 assert_out "context diff applied correctly" "BRAVO" \
     sh -c "$(tool sed) -n 2p goodc.txt"
 
+group "patch: normal diffs and -p path stripping (plan A/B, mkpath)"
+
+# Coverage supplement: normal-format diffs and prefixed paths walk
+# different parser and inp.c/patch.c paths than the unified/context
+# tests above, and a target path with a missing directory exercises
+# mkpath.c (which no other test reached).
+mktarget norm.txt
+cat > norm.diff <<'EOF'
+1c1
+< alpha
+---
+> ALPHA
+EOF
+assert_ok "applies a normal diff" "$PATCH" -t -i norm.diff norm.txt
+assert_out "normal diff applied correctly" "ALPHA" \
+    sh -c "$(tool sed) -n 1p norm.txt"
+
+mkdir -p strip && mktarget strip/deep.txt
+cat > strip.diff <<'EOF'
+--- a/deep.txt	2020-01-01
++++ b/deep.txt	2020-01-01
+@@ -1,3 +1,3 @@
+ alpha
+-bravo
++BRAVO
+ charlie
+EOF
+assert_ok "-p1 strips the a/ b/ prefixes" \
+    sh -c "cd strip && $PATCH -p1 -t -i ../strip.diff deep.txt"
+assert_out "-p1 diff applied correctly" "BRAVO" \
+    sh -c "$(tool sed) -n 2p strip/deep.txt"
+
+# The directory level does not exist yet: patch must create it
+# (mkpath.c) instead of failing or crashing.
+cat > mkdiff.diff <<'EOF'
+--- a/created/nested.txt	2020-01-01
++++ b/created/nested.txt	2020-01-01
+@@ -0,0 +1,2 @@
++alpha
++bravo
+EOF
+mkdir -p mkrun && cp mkdiff.diff mkrun/
+assert_ok "creates missing directories for the target file" \
+    sh -c "cd mkrun && $PATCH -p1 -t -i mkdiff.diff"
+assert_out "created file has the new content" "$(printf 'alpha\nbravo\n')" \
+    "$(tool cat)" mkrun/created/nested.txt
+
+group "patch: backup files and -o output (backupfile.c, util.c)"
+
+mktarget bak.txt
+cat > bak.diff <<'EOF'
+--- bak.txt	2020-01-01
++++ bak.txt	2020-01-01
+@@ -1,3 +1,3 @@
+ alpha
+-bravo
++BRAVO
+ charlie
+EOF
+assert_ok "patch -b makes a backup" "$PATCH" -b -t -i bak.diff bak.txt
+assert_ok "backup file exists" test -f bak.txt.orig
+assert_out "backup keeps the original content" "bravo" \
+    sh -c "$(tool sed) -n 2p bak.txt.orig"
+assert_out "target has the patched content" "BRAVO" \
+    sh -c "$(tool sed) -n 2p bak.txt"
+
+mktarget out.txt
+assert_ok "patch -o writes the result elsewhere" \
+    "$PATCH" -t -o patched.txt -i bak.diff out.txt
+assert_out "input file is untouched" "bravo" \
+    sh -c "$(tool sed) -n 2p out.txt"
+assert_out "-o output has the patched content" "BRAVO" \
+    sh -c "$(tool sed) -n 2p patched.txt"
+
 cu_finish

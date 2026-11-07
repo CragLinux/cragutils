@@ -12,6 +12,10 @@ fuzz/bin/
 fuzz/artifacts/
 build-ci-*/
 build-asan/
+build-cov/
+prof-*/
+*.profraw
+*.profdata
 
 fuzz/obj-sh/
 ci/.upstream-sync.state

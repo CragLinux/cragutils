@@ -149,12 +149,32 @@ EOF
 fi
 
 if require "awkdata corpus replay" awk; then
+    cat > run-awkb.sh <<EOF
+#!/bin/sh
+# fuzz_awkb input layout: byte 0 is the pattern length, then the
+# pattern, then the subject.  Replay through the real awk's dynamic
+# regex path — the same b.c DFA machinery (makedfa/cgoto/cclenter) the
+# in-process harness drives directly, but reached through main().
+f=\$1
+plen=\$(od -An -tu1 -N1 "\$f" | tr -d ' ')
+total=\$(wc -c < "\$f" | tr -d ' ')
+rest=\$((total - 1))
+[ "\$plen" -gt "\$rest" ] && plen=\$rest
+pat=\$(dd if="\$f" bs=1 skip=1 count="\$plen" 2>/dev/null | tr -d '\\000')
+subj=\$(dd if="\$f" bs=1 skip=\$((plen + 1)) 2>/dev/null | tr -d '\\000')
+PAT=\$pat SUBJ=\$subj exec '$(tool awk)' 'BEGIN { x = ENVIRON["SUBJ"]; x ~ ENVIRON["PAT"]; exit 0 }'
+EOF
+    chmod +x run-awkb.sh
     cat > run-awkdata.sh <<EOF
 #!/bin/sh
 '$(tool awk)' '{n+=NF} END{print n+0}' "\$1" >/dev/null 2>&1
 EOF
     chmod +x run-awkdata.sh
     replay "awkdata corpus replays without a crash" "$(corpus_dir awkdata)" ./run-awkdata.sh
+fi
+
+if require "awkb corpus replay" awk; then
+    replay "awkb corpus replays without a crash" "$(corpus_dir awkb)" ./run-awkb.sh
 fi
 
 if require "sedcompile corpus replay" sed; then
@@ -195,6 +215,9 @@ for d in "$CU_SRCDIR"/tests/data/crashers/*/; do
         getdate)
             require "crashers/$t" find || continue
             replay "saved $t crashers" "$d" ./run-getdate.sh ;;
+        awkb)
+            require "crashers/$t" awk || continue
+            replay "saved $t crashers" "$d" ./run-awkb.sh ;;
         *)  skip "saved $t crashers" "no runner defined" ;;
     esac
 done

@@ -14,7 +14,7 @@ cd "$(dirname "$0")/../.."
 
 BUILD_DIR=${BUILD_DIR:-build-ci}
 MESON_ARGS=${MESON_ARGS:-}
-TEST_FILTERS=${TEST_FILTERS:-00-smoke 10-regress 11-regress 12-regress 13-regress}
+TEST_FILTERS=${TEST_FILTERS:-00-smoke 10-regress 11-regress 12-regress 13-regress 16-regress 17-regress 18-regress}
 WERROR=${WERROR:-0}
 
 werror_arg=
