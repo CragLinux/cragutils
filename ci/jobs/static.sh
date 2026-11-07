@@ -54,9 +54,14 @@ signatures_from_scanbuild() {
         type=$(sed -n 's/.*BUGTYPE \(.*\) -->.*/\1/p' "$f" | head -n 1)
         file=$(sed -n 's/.*BUGFILE \(.*\) -->.*/\1/p' "$f" | head -n 1)
         [ -n "$type" ] || continue
+        # Normalize ONLY the file column.  norm_path strips everything
+        # before src.*, which would eat the checker type if it were
+        # applied to the whole "type file" line (that bug once degraded
+        # every signature to a bare path).
+        file=$(printf '%s\n' "$file" | norm_path)
         printf '%s %s\n' "$type" "$file" >> "$2.unsorted"
     done
-    sort -u "$2.unsorted" | norm_path > "$2"
+    sort -u "$2.unsorted" > "$2"
     rm -f "$2.unsorted"
 }
 
@@ -64,17 +69,24 @@ signatures_from_scanbuild() {
 compare() {
     _label=$1; _cur=$2; _base="$basedir/$3"
 
-    if [ "$UPDATE" = "1" ]; then
-        cp "$_cur" "$_base"
-        printf '=== %s: baseline updated (%s signatures)\n' \
-            "$_label" "$(wc -l < "$_base" | tr -d ' ')"
+    # comm needs both inputs sorted in the current collation; normalize
+    # through sort -u here so the baseline's on-disk order never matters.
+    _bpath="$basedir/$3"
+    if [ "$UPDATE" != "1" ] && [ ! -f "$_bpath" ]; then
+        printf '=== %s: no baseline at %s (run with STATIC_BASELINE_UPDATE=1)\n' \
+            "$_label" "$_bpath" >&2
+        fail=1
         return 0
     fi
+    sort -u "$_bpath" > "$BUILD_DIR/.base.sorted"
+    sort -u "$_cur" > "$BUILD_DIR/.cur.sorted"
+    _base="$BUILD_DIR/.base.sorted"
+    _cur="$BUILD_DIR/.cur.sorted"
 
-    if [ ! -f "$_base" ]; then
-        printf '=== %s: no baseline at %s (run with STATIC_BASELINE_UPDATE=1)\n' \
-            "$_label" "$_base" >&2
-        fail=1
+    if [ "$UPDATE" = "1" ]; then
+        cp "$_cur" "$_bpath"
+        printf '=== %s: baseline updated (%s signatures)\n' \
+            "$_label" "$(wc -l < "$_base" | tr -d ' ')"
         return 0
     fi
 
@@ -111,6 +123,13 @@ if ! ninja -C "$BUILD_DIR-gcc" > "$BUILD_DIR/gcc-build.log" 2>&1; then
     printf 'static.sh: gcc -fanalyzer build failed\n' >&2
     exit 1
 fi
+# Belt and braces: a partial build makes the analysis silently partial,
+# and wrappers can mask the build's exit status.  Any compile error in
+# the log is a failed analysis run.
+if grep -q ': error:' "$BUILD_DIR/gcc-build.log"; then
+    printf 'static.sh: compile errors in gcc build log\n' >&2
+    exit 1
+fi
 gcc_warns=$(grep -c 'warning:' "$BUILD_DIR/gcc-build.log" || true)
 printf '    %s warnings\n' "$gcc_warns"
 
@@ -124,6 +143,10 @@ if ! scan-build -o "$BUILD_DIR/scanbuild-out" ninja -C "$BUILD_DIR-scan" \
     > "$BUILD_DIR/scan-build.log" 2>&1; then
     sed -n '$p' "$BUILD_DIR/scan-build.log" >&2
     printf 'static.sh: scan-build build failed\n' >&2
+    exit 1
+fi
+if grep -q ': error:' "$BUILD_DIR/scan-build.log"; then
+    printf 'static.sh: compile errors in scan-build log\n' >&2
     exit 1
 fi
 rep=$(find "$BUILD_DIR/scanbuild-out" -mindepth 1 -maxdepth 1 -type d | head -n 1)
