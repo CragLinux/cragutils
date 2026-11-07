@@ -191,7 +191,14 @@ decode2(void)
 	void *handle;
 	struct passwd *pw;
 	struct stat st;
-	char buf[MAXPATHLEN + 1];
+	/*
+	 * outfile is a global and can be referenced by the error paths of
+	 * uu_decode()/base64_decode() and later decode2() passes, so the
+	 * header line it points into must outlive this function: a plain
+	 * stack buffer would leave outfile dangling on return (clang
+	 * analyzer: core.StackAddressEscape).
+	 */
+	static char buf[MAXPATHLEN + 1];
 
 	base64 = false;
 	/* search for header line */

@@ -125,7 +125,7 @@ static char *curline = NULL;
 static long lineno = 0;
 
 static	char   *cskip(char *);
-static	void	error(const char *);
+static	void	error(const char *) __attribute__((__noreturn__));
 static	char   *get_line(int);
 static	char   *getmsg(int, char *, char);
 static	void	warning(const char *, const char *);
@@ -323,8 +323,9 @@ static char *
 getmsg(int fd, char *cptr, char quote)
 {
 	static char *msg = NULL;
-	static long msglen = 0;
-	long    clen, i;
+	static size_t msglen = 0;
+	size_t  clen;
+	long    i;
 	char   *tptr;
 
 	if (quote && *cptr == quote) {
@@ -332,7 +333,9 @@ getmsg(int fd, char *cptr, char quote)
 	} 
 
 	clen = strlen(cptr) + 1;
-	if (clen > msglen) {
+	if (clen == 0)	/* wrap on a SIZE_MAX-length line: corrupt input */
+		CORRUPT();
+	if (clen > msglen || msg == NULL) {
 		if (msglen)
 			msg = xrealloc(msg, clen);
 		else
@@ -684,13 +687,16 @@ MCDelSet(int setId)
 
 	if (set && set->setId == setId) {
 
-		msg = set->msghead.lh_first;
-		while (msg) {
+		while ((msg = set->msghead.lh_first) != NULL) {
 			free(msg->str);
 			LIST_REMOVE(msg, entries);
+			free(msg);
 		}
 
 		LIST_REMOVE(set, entries);
+		if (set == curSet)
+			curSet = NULL;
+		free(set);
 		return;
 	}
 	warning(NULL, "specified set doesn't exist");

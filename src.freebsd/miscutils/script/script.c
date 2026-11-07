@@ -396,15 +396,19 @@ doshell(char **av)
 {
 	const char *shell;
 
-	shell = getenv("SHELL");
-	if (shell == NULL)
-		shell = _PATH_BSHELL;
-
 	(void)close(master);
 	(void)fclose(fscript);
 	free(fmfname);
 	login_tty(slave);
 	setenv("SCRIPT", fname, 1);
+	/*
+	 * getenv() after the setenv(): POSIX allows setenv() to
+	 * invalidate previously returned getenv() pointers
+	 * (cert-env33), and shell is passed to execl() below.
+	 */
+	shell = getenv("SHELL");
+	if (shell == NULL)
+		shell = _PATH_BSHELL;
 	if (av[0]) {
 		execvp(av[0], av);
 		warn("%s", av[0]);

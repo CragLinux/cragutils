@@ -269,4 +269,27 @@ if require "fetch" fetch; then
     assert_out "symlink target left intact" "target" cat ftgt.txt
 fi
 
+group "gencat: \$delset on a set with messages"
+
+# MCDelSet() drained the message list with a loop that never advanced the
+# cursor: free(msg->str) ran twice on the first node (double free, glibc
+# abort) and the _msgT/set nodes leaked.  It also left curSet pointing at
+# the deleted set.
+if require "gencat" gencat; then
+    printf '$set 1\n1 hello world\n$delset 1\n' > gc1.msg
+    assert_ok "delset after one message" \
+        "$(tool gencat)" gc1.cat gc1.msg
+    printf '$set 1\n1 first\n2 second\n$delset 1\n$set 2\n3 third\n' > gc2.msg
+    assert_ok "delset of one set, then build another" \
+        "$(tool gencat)" gc2.cat gc2.msg
+    # deleting the current set must not leave a dangling curSet behind
+    printf '$set 1\n1 x\n$delset 1\n$set 1\n1 y\n' > gc3.msg
+    assert_ok "delset of the current set, then reuse the id" \
+        "$(tool gencat)" gc3.cat gc3.msg
+    # message line with no live set must error cleanly, not crash
+    printf '$delset 5\n1 orphan\n' > gc4.msg
+    assert_status "message without a set exits 1" 1 \
+        "$(tool gencat)" gc4.cat gc4.msg
+fi
+
 cu_finish
