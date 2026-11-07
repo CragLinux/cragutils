@@ -176,4 +176,31 @@ two" "$(tool cat)" t12.txt
 printf 'a\nb\nc\n' > t13.txt
 ex_nocrash "global command over all lines" t13.txt 'g/./s/^/> /'
 
+group "nvi: file_end free-then-use of frp on the db-close failure path"
+
+# file_end() freed the FREF of a never-named (temporary) buffer before
+# attempting the db close, then read frp->name in the close-failure
+# message -- a heap use-after-free on that path.  The free is now
+# deferred past the close attempt.  Drive a close failure
+# deterministically with RLIMIT_FSIZE (SIGXFSZ ignored): the buffer
+# write succeeds, the close-time recovery sync write does not.
+out=$( ( trap '' XFSZ 2>/dev/null; ulimit -f 1 2>/dev/null
+        printf '%s\n' 'a' 'hello' '.' 'w vifile.txt' 'q' |
+        MALLOC_PERTURB_=165 cu_run_limited "$VI" -e -s ) 2>&1 )
+st=$?
+case $out in
+    *close*) pass "db-close failure is reported without crashing" ;;
+    *) fail "db-close failure is reported without crashing" "got [$out]" ;;
+esac
+if [ "$st" -gt 128 ] && [ "$st" -ne 152 ]; then
+    fail "close-failure path dies from a signal" "killed by signal $((st - 128))"
+else
+    pass "close-failure path dies from no signal"
+fi
+if [ -f vifile.txt ] && grep -q hello vifile.txt 2>/dev/null; then
+    pass "buffer write before the close failure still works"
+else
+    fail "buffer write before the close failure still works" "vifile.txt missing or empty"
+fi
+
 cu_finish

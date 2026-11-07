@@ -271,15 +271,24 @@ b_n_cut(FILE *fp, const char *fname)
 {
 	size_t col, i, bufsize = 0;
 	ssize_t lbuflen;
-	char *lbuf = NULL;
+	char *lbuf = NULL, *p;
 	int canwrite, clen, warned;
 	mbstate_t mbs;
 
 	memset(&mbs, 0, sizeof(mbs));
 	warned = 0;
 	while ((lbuflen = getline(&lbuf, &bufsize, fp)) >= 0) {
-		for (col = 0; lbuflen > 0; col += clen) {
-			if ((clen = mbrlen(lbuf, lbuflen, &mbs)) < 0) {
+		/*
+		 * Walk the line with a cursor; lbuf must stay at the start
+		 * of the getline allocation, since it is passed back to
+		 * getline() and free() below.  (Advancing lbuf itself left
+		 * getline() and free() with an interior pointer: an invalid
+		 * free on every run, and heap corruption once a later line
+		 * outgrew the buffer and getdelim() realloc'd the interior
+		 * pointer.)
+		 */
+		for (p = lbuf, col = 0; lbuflen > 0; col += clen) {
+			if ((clen = mbrlen(p, lbuflen, &mbs)) < 0) {
 				if (!warned) {
 					warn("%s", fname);
 					warned = 1;
@@ -287,7 +296,7 @@ b_n_cut(FILE *fp, const char *fname)
 				memset(&mbs, 0, sizeof(mbs));
 				clen = 1;
 			}
-			if (clen == 0 || *lbuf == '\n')
+			if (clen == 0 || *p == '\n')
 				break;
 			if (col < maxval && !positions[1 + col]) {
 				/*
@@ -304,7 +313,7 @@ b_n_cut(FILE *fp, const char *fname)
 				for (; i < col + clen && i < maxval; i++)
 					canwrite &= positions[1 + i];
 				if (canwrite)
-					fwrite(lbuf, 1, clen, stdout);
+					fwrite(p, 1, clen, stdout);
 			} else {
 				/*
 				 * Print the character if all of it has
@@ -318,9 +327,9 @@ b_n_cut(FILE *fp, const char *fname)
 						break;
 					}
 				if (canwrite)
-					fwrite(lbuf, 1, clen, stdout);
+					fwrite(p, 1, clen, stdout);
 			}
-			lbuf += clen;
+			p += clen;
 			lbuflen -= clen;
 		}
 		if (lbuflen > 0)

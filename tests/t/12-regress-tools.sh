@@ -292,4 +292,66 @@ if require "gencat" gencat; then
         "$(tool gencat)" gc4.cat gc4.msg
 fi
 
+group "cut: b_n_cut getline/free of an advanced pointer"
+
+# b_n_cut() (cut -b -n in a multibyte locale) walked each line with
+# lbuf += clen, then handed the advanced *interior* pointer back to
+# getline() and free(): "free(): invalid pointer" abort on every run,
+# and heap corruption / SIGSEGV as soon as a later line outgrew the
+# getline buffer and getdelim() realloc'd the interior pointer.  The
+# analyzer's "Function call with invalid argument" (fwrite with a
+# zero-sized remaining buffer) flagged the same pointer drift.
+if require "cut" cut; then
+    # The -n path only runs where MB_CUR_MAX > 1; find such a locale.
+    # Byte 2 of h\303\251llo is mid-character: b_n_cut emits nothing
+    # for -b 2, and two bytes for -b 3.
+    mb_loc=
+    for _loc in C.utf8 C.UTF-8 en_US.UTF-8 en_US.utf8; do
+        _o2=$(printf 'h\303\251llo\n' | LC_ALL=$_loc "$(tool cut)" \
+            -b 2 -n 2>/dev/null)
+        _o3=$(printf 'h\303\251llo\n' | LC_ALL=$_loc "$(tool cut)" \
+            -b 3 -n 2>/dev/null)
+        if [ -z "$_o2" ] && [ "$_o3" = "$(printf '\303\251')" ]; then
+            mb_loc=$_loc
+            break
+        fi
+    done
+    if [ -n "$mb_loc" ]; then
+        assert_no_crash "cut -b -n on plain ASCII lines" sh -c \
+            "printf 'ab\ncd\n' | LC_ALL=$mb_loc $(tool cut) -b 1 -n >/dev/null"
+        assert_no_crash "cut -b -n on multibyte lines" sh -c \
+            "printf 'h\303\251llo\nw\303\266rld\n' | LC_ALL=$mb_loc $(tool cut) -b 2-4 -n >/dev/null"
+        # long lines grow the getline buffer and expose the realloc'd
+        # interior pointer on the next iteration
+        assert_no_crash "cut -b -n with buffer-growing lines" sh -c \
+            "{ yes | head -c 3000; echo; yes | head -c 3000; echo; } | LC_ALL=$mb_loc $(tool cut) -b 1-9 -n >/dev/null"
+        _exp=$(printf 'h\303\251')
+        assert_eq "cut -b 1-3 -n selects whole characters" "$_exp" \
+            "$(printf 'h\303\251llo\n' | LC_ALL=$mb_loc "$(tool cut)" -b 1-3 -n)"
+        assert_eq "cut -b 2 -n mid-character selects nothing" "" \
+            "$(printf 'h\303\251llo\n' | LC_ALL=$mb_loc "$(tool cut)" -b 2 -n)"
+    else
+        skip "cut b_n_cut regressions" "no multibyte locale available"
+    fi
+fi
+
+group "truncate: zero round multiple (%0, /0) divided by zero"
+
+# do_round (-s %N / -s /N) accepted N == 0 and then computed
+# sb.st_size % sz with sz == 0: deterministic SIGFPE.  A zero multiple
+# is meaningless and is now rejected at parse time.
+if require "truncate" truncate; then
+    echo x > tr0.txt
+    assert_no_crash "truncate -s %0 rejects without SIGFPE" \
+        "$(tool truncate)" -s %0 tr0.txt
+    assert_no_crash "truncate -s /0 rejects without SIGFPE" \
+        "$(tool truncate)" -s /0 tr0.txt
+    assert_status "truncate -s %0 exits 1" 1 "$(tool truncate)" -s %0 tr0.txt
+    assert_eq "truncate -s %0 leaves the file unchanged" "2" \
+        "$(wc -c < tr0.txt)"
+    assert_ok "truncate -s %5 still rounds" "$(tool truncate)" -s %5 tr0.txt
+    assert_eq "truncate -s %5 rounds up to the multiple" "5" \
+        "$(wc -c < tr0.txt)"
+fi
+
 cu_finish
