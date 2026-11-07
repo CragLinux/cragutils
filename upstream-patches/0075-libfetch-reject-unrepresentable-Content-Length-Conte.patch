@@ -1,0 +1,203 @@
+From fe8b3019329c6f425a6170dc45d6ff0271571e3c Mon Sep 17 00:00:00 2001
+From: Michael John <mj@tierone.software>
+Date: Fri, 6 Nov 2026 22:33:29 -0500
+Subject: [PATCH] libfetch: reject unrepresentable Content-Length/Content-Range
+ values
+
+http_parse_length() (http.c:921) and http_parse_range() (:945/:949/
+:954) accumulated attacker-controlled decimal header values with
+plain off_t multiply-and-add, and the range check `len < last - first
++ 1` plus `*length = last - first + 1` (:955/:963) overflowed for a
+range ending at OFF_MAX -- UBSan signed-integer overflow throughout,
+new versus the P2 "1M execs clean" baseline.
+
+Beyond the UB this is an integrity bug: the wrapped value becomes
+fetch(1)'s believed body length.  Content-Length: 18446744073709551621
+(2^64+5) wrapped to 5 and fetch silently accepted a 5-byte truncation
+of a 10-byte response with exit 0 (a MITM can truncate any download
+undetectably), and a 20-digit value wrapped to 8219922592958115050
+made fetch report a complete transfer as truncated.  PoC-verified
+pre-fix and post-fix against a local server.
+
+Accumulate through http_accum_digit() (rejecting anything past OFF_MAX,
+the dd/grep OFF_MAX fallback idiom) and compare the range without the
++1: surviving the check implies last - first + 1 <= len <= OFF_MAX, so
+the later +1 cannot overflow.  Unrepresentable values now leave the
+length unknown (-1) and fetch falls back to read-to-EOF instead of
+trusting a wrapped length.  Pinned by the fetch group in
+12-regress-tools.sh; the overflow inputs are kept as fuzz/corpus/http/
+seeds (overflow-*, wrap-*, reply-*).
+
+Co-Authored-By: Hermes Agent <hermes@tierone.software>
+---
+ .../http/overflow-content-length-20digit      |  1 +
+ .../http/overflow-content-length-40digit      |  1 +
+ .../http/overflow-content-range-at-off-max    |  1 +
+ fuzz/corpus/http/overflow-content-range-len   |  1 +
+ fuzz/corpus/http/reply-huge-content-length    |  4 ++
+ fuzz/corpus/http/reply-huge-content-range     |  5 +++
+ fuzz/corpus/http/reply-wrap-content-length    |  4 ++
+ .../http/wrap-content-length-2pow64plus5      |  1 +
+ src.freebsd/libfetch/http.c                   | 43 ++++++++++++++++---
+ 9 files changed, 55 insertions(+), 6 deletions(-)
+ create mode 100644 fuzz/corpus/http/overflow-content-length-20digit
+ create mode 100644 fuzz/corpus/http/overflow-content-length-40digit
+ create mode 100644 fuzz/corpus/http/overflow-content-range-at-off-max
+ create mode 100644 fuzz/corpus/http/overflow-content-range-len
+ create mode 100644 fuzz/corpus/http/reply-huge-content-length
+ create mode 100644 fuzz/corpus/http/reply-huge-content-range
+ create mode 100644 fuzz/corpus/http/reply-wrap-content-length
+ create mode 100644 fuzz/corpus/http/wrap-content-length-2pow64plus5
+
+diff --git a/fuzz/corpus/http/overflow-content-length-20digit b/fuzz/corpus/http/overflow-content-length-20digit
+new file mode 100644
+index 00000000..51ddaebf
+--- /dev/null
++++ b/fuzz/corpus/http/overflow-content-length-20digit
+@@ -0,0 +1 @@
++26666666666667666666
+\ No newline at end of file
+diff --git a/fuzz/corpus/http/overflow-content-length-40digit b/fuzz/corpus/http/overflow-content-length-40digit
+new file mode 100644
+index 00000000..a6c4dd74
+--- /dev/null
++++ b/fuzz/corpus/http/overflow-content-length-40digit
+@@ -0,0 +1 @@
++999999999999999999999999999999999999999999
+\ No newline at end of file
+diff --git a/fuzz/corpus/http/overflow-content-range-at-off-max b/fuzz/corpus/http/overflow-content-range-at-off-max
+new file mode 100644
+index 00000000..f9c8da39
+--- /dev/null
++++ b/fuzz/corpus/http/overflow-content-range-at-off-max
+@@ -0,0 +1 @@
++bytes 0-9223372036854775807/9223372036854775807
+\ No newline at end of file
+diff --git a/fuzz/corpus/http/overflow-content-range-len b/fuzz/corpus/http/overflow-content-range-len
+new file mode 100644
+index 00000000..f4f769f6
+--- /dev/null
++++ b/fuzz/corpus/http/overflow-content-range-len
+@@ -0,0 +1 @@
++bytes 0-0/26666666666667666666
+\ No newline at end of file
+diff --git a/fuzz/corpus/http/reply-huge-content-length b/fuzz/corpus/http/reply-huge-content-length
+new file mode 100644
+index 00000000..c99101e6
+--- /dev/null
++++ b/fuzz/corpus/http/reply-huge-content-length
+@@ -0,0 +1,4 @@
++HTTP/1.1 200 OK
++Content-Length: 26666666666667666666
++
++hello
+\ No newline at end of file
+diff --git a/fuzz/corpus/http/reply-huge-content-range b/fuzz/corpus/http/reply-huge-content-range
+new file mode 100644
+index 00000000..1972d5a3
+--- /dev/null
++++ b/fuzz/corpus/http/reply-huge-content-range
+@@ -0,0 +1,5 @@
++HTTP/1.1 206 Partial Content
++Content-Range: bytes 0-9223372036854775807/9223372036854775807
++Content-Length: 5
++
++hello
+\ No newline at end of file
+diff --git a/fuzz/corpus/http/reply-wrap-content-length b/fuzz/corpus/http/reply-wrap-content-length
+new file mode 100644
+index 00000000..3411b507
+--- /dev/null
++++ b/fuzz/corpus/http/reply-wrap-content-length
+@@ -0,0 +1,4 @@
++HTTP/1.1 200 OK
++Content-Length: 18446744073709551621
++
++hellohello
+\ No newline at end of file
+diff --git a/fuzz/corpus/http/wrap-content-length-2pow64plus5 b/fuzz/corpus/http/wrap-content-length-2pow64plus5
+new file mode 100644
+index 00000000..7e9ecf7f
+--- /dev/null
++++ b/fuzz/corpus/http/wrap-content-length-2pow64plus5
+@@ -0,0 +1 @@
++18446744073709551621
+\ No newline at end of file
+diff --git a/src.freebsd/libfetch/http.c b/src.freebsd/libfetch/http.c
+index 620d6185..af44d184 100644
+--- a/src.freebsd/libfetch/http.c
++++ b/src.freebsd/libfetch/http.c
+@@ -910,15 +910,37 @@ http_parse_mtime(const char *p, time_t *mtime)
+ }
+ 
+ /*
+- * Parse a content-length header
++ * off_t upper bound, for the overflow-checked header-value parsers
++ * below (the dd/grep ports carry the same fallback).
++ */
++#ifndef OFF_MAX
++#define OFF_MAX ((off_t)(((1ULL << (sizeof(off_t) * CHAR_BIT - 2)) - 1) * 2 + 1))
++#endif
++
++/*
++ * Accumulate one decimal digit into an off_t, rejecting any value that
++ * would overflow.  The inputs are response-header values and therefore
++ * attacker-controlled; the plain multiply-and-add wrapped (UBSan
++ * signed-integer overflow).
+  */
++static int
++http_accum_digit(off_t *acc, int digit)
++{
++
++	if (*acc > (OFF_MAX - digit) / 10)
++		return (-1);
++	*acc = *acc * 10 + digit;
++	return (0);
++}
++
+ static int
+ http_parse_length(const char *p, off_t *length)
+ {
+ 	off_t len;
+ 
+ 	for (len = 0; *p && isdigit((unsigned char)*p); ++p)
+-		len = len * 10 + (*p - '0');
++		if (http_accum_digit(&len, *p - '0') != 0)
++			return (-1);
+ 	if (*p)
+ 		return (-1);
+ 	DEBUGF("content length: [%lld]\n", (long long)len);
+@@ -942,17 +964,26 @@ http_parse_range(const char *p, off_t *offset, off_t *length, off_t *size)
+ 		++p;
+ 	} else {
+ 		for (first = 0; *p && isdigit((unsigned char)*p); ++p)
+-			first = first * 10 + *p - '0';
++			if (http_accum_digit(&first, *p - '0') != 0)
++				return (-1);
+ 		if (*p != '-')
+ 			return (-1);
+ 		for (last = 0, ++p; *p && isdigit((unsigned char)*p); ++p)
+-			last = last * 10 + *p - '0';
++			if (http_accum_digit(&last, *p - '0') != 0)
++				return (-1);
+ 	}
+ 	if (first > last || *p != '/')
+ 		return (-1);
+ 	for (len = 0, ++p; *p && isdigit((unsigned char)*p); ++p)
+-		len = len * 10 + *p - '0';
+-	if (*p || len < last - first + 1)
++		if (http_accum_digit(&len, *p - '0') != 0)
++			return (-1);
++	/*
++	 * len must cover first..last; compare without the +1, which
++	 * overflows for a range ending at OFF_MAX.  Surviving this check
++	 * means last - first + 1 <= len <= OFF_MAX, so the computation
++	 * of *length below cannot overflow.
++	 */
++	if (*p || len <= last - first)
+ 		return (-1);
+ 	if (first == -1) {
+ 		DEBUGF("content range: [*/%lld]\n", (long long)len);
+-- 
+2.43.0
+

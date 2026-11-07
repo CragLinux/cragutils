@@ -413,9 +413,13 @@ everything below was unreachable from it.
   the attribute **only on flexible array members**, rejecting pointers
   with a hard error, so `struct fetchconn.buf` failed to compile on
   Alpine/gcc — the entire musl build was broken.
-- Fixed: restrict to clang, which supports the pointer form. The
+- Fixed: restrict to clang, which supports the pointer form.  The
   annotation is a checking aid with no semantic effect, so compiling it
-  away elsewhere is safe. Found by the musl CI job on its first run.
+  away elsewhere is safe.  Found by the musl CI job on its first run.
+  Follow-up (host clang 18 build, 2026-11): clang 18/19 answer
+  `__has_attribute(counted_by)` too but accept it only on flexible
+  array members, hard-erroring on the pointer form we use — the gate is
+  now `__clang_major__ >= 20` as well, a standalone build fix.
 
 ### FIXED — sort: zero-length memcpy from a NULL leaf array
 - `src.freebsd/coreutils/sort/radixsort.c:593` and :628
@@ -609,6 +613,116 @@ path (with `-f` it even unlinked the input file). Port-local fix:
 treat `/dev/stdout`/`/dev/stdin` as magic cookies — `fdopen(dup(fd))`
 in `stdopen()`/`zopen()`, never managed as a regular output file.
 Regression tests in `tests/t/12-regress-tools.sh`.
+
+## Campaign run (14 targets × 300 s, 2026-11)
+
+Full-campaign pass over all fourteen harnesses (~300 s each, grown
+corpora +11.7k inputs; 46,424 total, committed).  One timeout artifact
+and two UBSan findings, all triaged below.
+
+### ANALYZED, not ours — sed s///g output amplification (timeout-f02e889b)
+- The campaign's one timeout artifact (`fuzz_sedcompile`, 1753 bytes,
+  alarm at the 25 s harness budget).  The script is a chain of ~31
+  `s///` commands whose replacements plant matches for the next
+  command; a single input character `o` is amplified to **~96 MB of
+  output** (C locale: ~180 MB) by the chain.  The real `sed -f` on the
+  harness's fixed 5-line input emits 1.25 GB in ~62 s CPU.
+- Verdict is by-design, not superlinear regex backtracking:
+  - time tracks output volume (~27 MB/s; 1 input `o` = 3.6 s / 96 MB,
+    6 `o` = 25 s / 578 MB — near-linear), and inputs without `o` are
+    instant and grow output linearly (~417 B/char);
+  - every regex in the chain is trivial (`oo`, `oo\xfa`, a character
+    class star) — no nested quantifiers, nothing to backtrack;
+  - the semantics are portable: GNU sed 4.9 run on the equivalent
+    canonical script amplifies identically (179.9 MB vs our 180.5 MB
+    per input `o` in the C locale; same order, same mechanism).
+  This is the same class as the P2 `s///g` amplification note above:
+  each global substitution plants matches for the next, and the
+  regexec re-scan of the growing pattern space adds the known
+  intrinsic quadratic term.  Legal sed, not a bug; sed scripts are
+  programs (`:a;ba` loops too), so amplification alone is not a defect.
+- The embedded NUL bytes in the fuzz input are in-command line
+  continuations (`compile_subst`/`compile_flags` read the next physical
+  line when the current one ends mid-command), so the odd `\xfe` "lines"
+  are continuation text of three giant `s///` commands, not garbage
+  commands.  byte 0 of a `fuzz_sedcompile` input is the flags byte
+  (bit 0 = `-E`, bit 1 = `-n`), not script text.
+- Triage handling: kept as `fuzz/artifacts/slow-unit-f02e889b…` — the
+  tree's reported-but-not-failing perf-note slot, honoured by both
+  `ci/jobs/fuzz-regress.sh` and `tests/t/20-fuzz-corpus.sh`; the
+  committed minimization is `fuzz/minimized/sedcompile-timeout-min`
+  (1290 bytes, same amplification chain).  It is deliberately **not**
+  seeded into `fuzz/corpus/sedcompile/`: the input
+  takes >25 s per harness execution (the campaign's own timeout), so a
+  corpus copy would fail every future `-timeout=25` campaign at INIT
+  and burn minutes on every deterministic replay, and the corpus leg of
+  `tests/t/20-fuzz-corpus.sh` (15 s `CU_TIMEOUT`) measured 14.5 s CPU /
+  384 MB even on its small sample input — a flaky-to-failing replay.
+
+### FIXED — fuzz — sed: zero offset to NULL in regsub (process.c:720)
+- `regsub()` started with `dst = sp->space + sp->len` on a never-used
+  substitute space (`space == NULL`, `len == 0`) — a zero offset from
+  NULL is UB (UBSan "applying zero offset to null pointer"), hit by the
+  first substitution of every run with both `fuzz_sedcompile` and
+  `fuzz_seddata`.  Same UB class as the cspace()/ed/sort zero-length
+  copy fixes.  Behaviour was correct; UB only.
+- Fixed: only form `space + len` for a live buffer (guarded like the
+  cspace() `len > 0` fix).  Regression tests in `tests/t/12-regress-tools.sh`
+  (the regsub output paths: `&`, backrefs, global, zero-width matches);
+  seed `fuzz/corpus/sedcompile/regsub-null-dst-ubsan`.  Upstream patch
+  queued as upstream-patches/0074.
+
+### FIXED — fuzz — libfetch: header-value integer overflow (silent truncation)
+- `http_parse_length()` (`http.c:921`) and `http_parse_range()`
+  (`:945/:949/:954`) accumulated attacker-controlled decimal header
+  values with plain `off_t` multiply-and-add, and the range check
+  `len < last - first + 1` plus `*length = last - first + 1`
+  (`:955/:963`) overflowed for a range ending at `OFF_MAX`.  UBSan
+  signed-integer overflow throughout; NEW vs the P2 "1M execs clean"
+  baseline (that corpus predates this one).
+- Beyond UB this is an **integrity bug**: the wrapped value becomes
+  fetch(1)'s believed body length.  `Content-Length: 18446744073709551621`
+  (2⁶⁴+5) wrapped to 5 and fetch silently accepted a 5-byte truncation
+  of a 10-byte response, exit 0 — a MITM can truncate any download
+  undetectably; a 20-digit value wrapped to 8219922592958115050 and
+  fetch reported the complete transfer as "truncated".  PoC-verified
+  pre-fix and post-fix against a local server.
+- Fixed: overflow-checked decimal accumulation (`http_accum_digit`,
+  rejecting anything past `OFF_MAX`, the dd/grep `OFF_MAX` fallback
+  idiom) and the range arithmetic rewritten to compare without the
+  `+1` (surviving the check implies `last - first + 1 <= len <=
+  OFF_MAX`, so the later `+1` cannot overflow).  Unrepresentable values
+  now leave the length unknown (`-1`), so fetch falls back to
+  read-to-EOF instead of trusting a wrapped length.  Regression tests
+  in `tests/t/12-regress-tools.sh` (local python3 server: overflowing
+  Content-Length, wrapping Content-Length truncation case,
+  overflowing Content-Range); seeds in `fuzz/corpus/http/`
+  (`overflow-*`, `wrap-*`, `reply-*`).  Upstream patch queued as
+  upstream-patches/0075.
+
+### FIXED — fuzz — patch: CPU-exhaustion DoS via huge claimed hunk line numbers
+- Found by the `tests/t/20-fuzz-corpus.sh` replay leg (real binary,
+  the parse-only harness cannot reach the apply path): harvested
+  patch_struct input `0e215230…` — a 1.1 KB indented normal diff whose
+  hunk claims line `4294967295` — burned **23 CPU seconds** in real
+  `patch` before "Hunk #1 failed".  `locate_hunk()` walks offsets from
+  1 outward around `pch_first() + last_offset`; a claimed line number
+  near 2^32 makes the walk to the only live window (the 5-line target
+  file) cost ~2^32 iterations, and a claimed 2^63 line number is an
+  effectively unbounded CPU DoS — `patch` consumes fully
+  attacker-controlled diffs (mailed patches), so this is reachable
+  without any file access, unlike the plan_a race.  Same class as the
+  earlier "unbounded memory DoS" fix (huge claimed hunk *size*); this
+  is the huge claimed hunk *position* cousin.
+- Fixed: the scan now starts at the first offset that can put the hunk
+  inside the input file — offsets that leave the hunk outside can
+  never match (`ifetch()` reports the lines missing; a hunk with
+  missing lines does not match), so skipping the dead prefix preserves
+  both the candidate set and the closest-first order exactly (the
+  nonzero-offset match case is pinned too).  The corpus input now
+  fails in 3 ms, and diffs claiming 2^63-1 / 2^64 lines fail in ~1 ms.
+  Regression tests in `tests/t/10-regress-patch.sh`.  Upstream patch
+  queued as upstream-patches/0076.
 
 ## Remediation approach (Phase 3)
 
@@ -1029,7 +1143,8 @@ LOW / ACCEPTED (race exists, no boundary crossed):
   `-fsanitize=bounds,object-size` with `-fsanitize-minimal-runtime
   -fsanitize-trap=bounds,object-size`.
 - `__counted_by` adoption (incremental): macro `__cu_counted_by` in
-  `include/sys/cdefs.h` (empty on pre-clang-18/gcc-15). Annotated so far:
+  `include/sys/cdefs.h` (empty except on clang 20+: gcc 15 and clang
+  18/19 claim the attribute but reject the pointer form). Annotated so far:
   - `struct fetchconn.buf` (libfetch, network-facing) — `bufsize` is a true
     capacity member.
   - `ARGS.bp` (nvi) — `blen` capacity member.
