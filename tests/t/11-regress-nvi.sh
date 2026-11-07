@@ -184,9 +184,13 @@ group "nvi: file_end free-then-use of frp on the db-close failure path"
 # deferred past the close attempt.  Drive a close failure
 # deterministically with RLIMIT_FSIZE (SIGXFSZ ignored): the buffer
 # write succeeds, the close-time recovery sync write does not.
+# LLVM_PROFILE_FILE=/dev/null: under ulimit -f 1 the instrumented nvi's
+# exit-time profile write is truncated to 512 bytes, leaving a corrupt
+# .profraw that poisons llvm-profdata's merge of the whole run.
 out=$( ( trap '' XFSZ 2>/dev/null; ulimit -f 1 2>/dev/null
         printf '%s\n' 'a' 'hello' '.' 'w vifile.txt' 'q' |
-        MALLOC_PERTURB_=165 cu_run_limited "$VI" -e -s ) 2>&1 )
+        MALLOC_PERTURB_=165 LLVM_PROFILE_FILE=/dev/null \
+        cu_run_limited "$VI" -e -s ) 2>&1 )
 st=$?
 case $out in
     *close*) pass "db-close failure is reported without crashing" ;;
