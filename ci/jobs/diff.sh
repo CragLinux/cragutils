@@ -1,28 +1,29 @@
 #!/bin/sh
 # Build cragutils and run the differential corpus (PLAN.md P9) against
-# the GNU backend.
+# the GNU host tools and the FreeBSD VM oracle.
 #
 # Parameterised entirely by the environment:
 #   BUILD_DIR      build tree (default: build-ci-diff)
 #   BINDIR        use an existing flat tool directory instead of building
 #   DIFF_BACKENDS backends for tests/diff/run-diff.sh
-#                  (default: cragutils,gnu — see below)
+#                  (default: cragutils,gnu,freebsd)
 #   DIFF_ARGS     extra arguments for tests/diff/run-diff.sh
 #
 # DRIFT gating: DRIFT is the only gate-failing verdict and is defined by
-# the cragutils-vs-FreeBSD comparison.  Until the FreeBSD VM oracle
-# (tests/diff/oracle/run-on-freebsd.sh) lands, this job runs with
-# DIFF_BACKENDS=cragutils,gnu so no DRIFT can be produced and the job
-# gates on the runner itself plus the junit report existing.  When the
-# oracle lands, switch the default to cragutils,gnu,freebsd (or run with
-# the oracle present — the runner picks it up) and the same script
-# starts gating on DRIFT without further changes.
+# the cragutils-vs-FreeBSD comparison.  The FreeBSD VM oracle
+# (tests/diff/oracle/run-on-freebsd.sh) has landed, so the default is
+# cragutils,gnu,freebsd and the job gates on DRIFT: undeclared
+# cragutils-vs-FreeBSD mismatches fail it, declared deltas (delta: hints
+# referencing DIFFERENCES/ headings) and GNU divergences do not.  When
+# the oracle is absent or its VM is not running the freebsd backend
+# skips cleanly (never a DRIFT), so the job also works without a VM; run
+# it with the oracle up to get real DRIFT gating.
 set -eu
 
 cd "$(dirname "$0")/../.."
 
 BUILD_DIR=${BUILD_DIR:-build-ci-diff}
-DIFF_BACKENDS=${DIFF_BACKENDS:-cragutils,gnu}
+DIFF_BACKENDS=${DIFF_BACKENDS:-cragutils,gnu,freebsd}
 DIFF_ARGS=${DIFF_ARGS:-}
 
 if [ -n "${BINDIR:-}" ]; then

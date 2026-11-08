@@ -66,20 +66,21 @@ verdict.
 `ci/jobs/diff.sh` builds the tree and runs `tests/diff/run-diff.sh` —
 the PLAN.md P9 differential corpus (real invocations harvested from
 Crag's own scripts plus edge cases for the heavily-patched tools)
-against the host GNU tools, writing junit to
-`build/state/test-results/diff.xml` and a human report to
+against the host GNU tools and the FreeBSD VM oracle
+(`tests/diff/oracle/`, run it up first with `vm.sh start`), writing
+junit to `build/state/test-results/diff.xml` and a human report to
 `build/state/test-results/diff.txt`.  Every cragutils-vs-GNU divergence
 it finds is written up in `TRADEOFFS`.
 
 DRIFT — the only gate-failing verdict — is defined by the
-cragutils-vs-*FreeBSD* comparison, so it cannot occur while the job runs
-with `DIFF_BACKENDS=cragutils,gnu` (the current default).  **When the
-FreeBSD VM oracle (`tests/diff/oracle/run-on-freebsd.sh`) lands, set the
-default backends to `cragutils,gnu,freebsd` (or just run where the
-oracle is present — the runner picks it up) and DRIFT gating activates
-with no other changes**: undeclared cragutils-vs-FreeBSD mismatches then
-fail the job, declared deltas (`delta:` hints referencing `DIFFERENCES/`
-headings) and GNU divergences do not.
+cragutils-vs-*FreeBSD* comparison.  The FreeBSD VM oracle has landed
+and the default `DIFF_BACKENDS` is `cragutils,gnu,freebsd`, so the job
+gates on DRIFT: undeclared cragutils-vs-FreeBSD mismatches fail it,
+declared deltas (`delta:` hints referencing `DIFFERENCES/` headings) and
+GNU divergences do not.  When the oracle is absent or its VM is not
+running, the `freebsd` backend skips cleanly (never a DRIFT), so the
+same script still runs anywhere; run it with the oracle up to get real
+DRIFT gating.
 
 ## Coverage job
 
