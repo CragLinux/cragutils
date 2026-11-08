@@ -330,17 +330,58 @@ patch on a mailing list.
 - [ ] Consider a minimal-tool build profile for production images
       (meson option) distinct from the development image.
 
-## P9 — Differential testing vs. GNU and upstream
+## P9 — Differential testing (FreeBSD is the reference)
 
 **Why:** the jot bug is a class the analyzers cannot see — the port
-behaving differently from both upstream FreeBSD and GNU. This is
+behaving differently from the reference implementation. This is
 robustness rather than security, but it is what protects Crag from
 subtle script breakage after an import.
 
-- [ ] Harness driving identical invocations through cragutils, GNU
-      coreutils and toybox; diff stdout/stderr/exit status.
-- [ ] Run it against FreeBSD binaries too, to separate "port bug" from
-      "BSD/GNU difference" (the latter belongs in `TRADEOFFS`).
+**Policy (user decision, 2026-11-07):** these tools come from FreeBSD
+and we say so. FreeBSD behavior is the **reference**:
+
+- cragutils differs from FreeBSD → it is a port bug **unless** the
+  difference is listed in `DIFFERENCES/` (a declared delta, e.g. one of
+  our hardening fixes). Undeclared drift is what the gate catches.
+- cragutils differs from GNU (or toybox) but matches FreeBSD → this is
+  expected and correct. Record it in `TRADEOFFS` as documentation so
+  script authors know; never "fix" it toward GNU.
+
+**Design:**
+
+- Oracle: a real FreeBSD userland, booted in a QEMU VM (x86_64, TCG on
+  this host), commands run over ssh. Real FreeBSD — not a
+  re-implementation — so the comparison is honest.
+- Harness in `tests/diff/`: a case corpus (one table per tool: argv,
+  stdin, environment, per-case normalization hints) run against every
+  implementation — cragutils build, the FreeBSD VM, and the host GNU
+  tools. Compare stdout bytes and exit status strictly; stderr only as
+  present/absent (message wording legitimately differs between BSD and
+  GNU). Normalize run-specific values (workdir paths, PIDs) via
+  explicit per-case hints, never fuzzy matching.
+- Verdict classes: `MATCH` / `DECLARED_DELTA` (matches a `DIFFERENCES/`
+  entry) / `DRIFT` (undeclared FreeBSD mismatch — **the only
+  gate-failing class**) / `GNU_DIVERGENCE` (documentation only).
+- Case corpus: harvest real invocations from Crag's own scripts first
+  (build/, cports templates, dinit services) — those are the behaviors
+  we actually depend on — then edge cases for the heavily-patched
+  tools: patch, sed, awk, nvi, sh, fetch, cut, truncate, date/jot,
+  sort, stat, find.
+- CI: job `diff`, gating on DRIFT only. The FreeBSD VM runs locally and
+  in CI where KVM is available; the GNU comparison job never gates.
+
+Deliverables:
+
+- [ ] FreeBSD VM oracle: bootable image + ssh runner script
+      (`tests/diff/oracle/`), cold boot and per-command timing recorded.
+- [ ] Harness: case format, runner, normalizer, verdict
+      classification, human + junit reports.
+- [ ] Seed corpus for the priority tools, harvested from Crag scripts.
+- [ ] cragutils-vs-GNU pass over the corpus; every divergence written
+      up in `TRADEOFFS` (this is immediately useful documentation).
+- [ ] cragutils-vs-FreeBSD pass over the corpus; every DRIFT triaged
+      (fix the port bug or declare the delta in `DIFFERENCES/`).
+- [ ] CI wiring: `diff` job gating on DRIFT.
 
 ---
 
