@@ -1,0 +1,9 @@
+# stat differential cases — see tests/diff/README.md for the format.
+# fields: id<TAB>argv<TAB>stdin<TAB>env<TAB>hints
+c-perm	stat -c %a f	-	-	-
+f-perm	stat -f %OLp f	-	-	-
+c-size	stat -c %s f	-	-	-
+f-size	stat -f %z f	-	-	-
+basic	stat -f '%N %Sp %z' f	-	-	-
+H-handle	stat -H f	-	-	delta:stat -H
+f-name	stat -f '%N %z' f	-	-	-

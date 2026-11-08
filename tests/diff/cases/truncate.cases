@@ -1,0 +1,9 @@
+# truncate differential cases — see tests/diff/README.md for the format.
+# fields: id<TAB>argv<TAB>stdin<TAB>env<TAB>hints
+shrink	truncate -s 50 img	-	-	post:img
+grow	truncate -s 200 img	-	-	post:img
+zero	truncate -s 0 img	-	-	post:img
+create	truncate -s 10 newfile	-	-	post:newfile
+k-suffix	truncate -s 128K img	-	-	post:img
+negative	truncate -s -1 img	-	-	post:img
+bad-size	truncate -s xyz img	-	-	post:img

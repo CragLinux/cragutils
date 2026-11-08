@@ -24,6 +24,8 @@
 #   coverage    clang source-based coverage (llvm-cov) over the suite
 #   zig         zig build (ReleaseSafe), smoke + full suite
 #   static      gcc -fanalyzer + scan-build vs. the findings baseline
+#   diff        differential corpus vs. GNU (FreeBSD DRIFT gating when
+#               the VM oracle lands — see ci/jobs/diff.sh)
 #
 # Options:
 #   --host          run directly instead of in a container
@@ -41,7 +43,7 @@ rebuild=0
 keep_going=0
 jobs=
 
-all_jobs="gcc clang musl sanitizers fuzz msan hardening coverage zig static"
+all_jobs="gcc clang musl sanitizers fuzz msan hardening coverage zig static diff"
 
 while [ $# -gt 0 ]; do
     case $1 in
@@ -202,6 +204,14 @@ run_job() {
                     CC=clang CXX=clang++
             else
                 CC=clang CXX=clang++ sh "$srcdir/ci/jobs/coverage.sh"
+            fi ;;
+        diff)
+            if [ "$use_container" = "1" ]; then
+                build_image "$img_fedora" Containerfile.fedora
+                in_container "$img_fedora" 'sh ci/jobs/diff.sh' \
+                    CC=gcc CXX=g++ BUILD_DIR=build-ci-diff
+            else
+                CC=gcc CXX=g++ BUILD_DIR=build-ci-diff sh "$srcdir/ci/jobs/diff.sh"
             fi ;;
         *)
             printf 'run-ci.sh: unknown job %s (see --list)\n' "$_job" >&2

@@ -35,6 +35,7 @@ they are cached by podman.
 | `coverage` | clang source-based coverage (llvm-cov) over the suite |
 | `zig` | zig build (ReleaseSafe), smoke tests + full suite |
 | `static` | gcc -fanalyzer + scan-build, gated against the findings baseline |
+| `diff` | differential corpus vs. GNU; DRIFT gating when the FreeBSD oracle lands |
 
 `sanitizers` is the job most likely to find something new: it drives the
 regression tests and the whole fuzz corpus through instrumented binaries,
@@ -59,6 +60,26 @@ reported as resolved so the lists can be tightened.
 toolchain bump or a triaged new finding — triage the delta before
 committing it, and only regenerate once every new signature carries a
 verdict.
+
+## Differential job
+
+`ci/jobs/diff.sh` builds the tree and runs `tests/diff/run-diff.sh` —
+the PLAN.md P9 differential corpus (real invocations harvested from
+Crag's own scripts plus edge cases for the heavily-patched tools)
+against the host GNU tools, writing junit to
+`build/state/test-results/diff.xml` and a human report to
+`build/state/test-results/diff.txt`.  Every cragutils-vs-GNU divergence
+it finds is written up in `TRADEOFFS`.
+
+DRIFT — the only gate-failing verdict — is defined by the
+cragutils-vs-*FreeBSD* comparison, so it cannot occur while the job runs
+with `DIFF_BACKENDS=cragutils,gnu` (the current default).  **When the
+FreeBSD VM oracle (`tests/diff/oracle/run-on-freebsd.sh`) lands, set the
+default backends to `cragutils,gnu,freebsd` (or just run where the
+oracle is present — the runner picks it up) and DRIFT gating activates
+with no other changes**: undeclared cragutils-vs-FreeBSD mismatches then
+fail the job, declared deltas (`delta:` hints referencing `DIFFERENCES/`
+headings) and GNU divergences do not.
 
 ## Coverage job
 

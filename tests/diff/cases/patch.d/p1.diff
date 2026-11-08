@@ -1,0 +1,8 @@
+--- a/src/hello.c
++++ b/src/hello.c
+@@ -1,4 +1,4 @@
+ int main(void)
+ {
+-    return 0;
++    return 1;
+ }

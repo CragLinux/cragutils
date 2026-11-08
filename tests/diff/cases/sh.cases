@@ -1,0 +1,14 @@
+# sh differential cases — see tests/diff/README.md for the format.
+# fields: id<TAB>argv<TAB>stdin<TAB>env<TAB>hints
+echo	sh -c 'echo hello' nm	-	-	-
+exit3	sh -c 'exit 3' nm	-	-	-
+case	sh -c 'case abc in a*) echo yes;; *) echo no;; esac' nm	-	-	-
+positional	sh -c 'echo $#:$1' nm one two	-	-	-
+param-expand	sh -c 'v=hello; echo ${v%%l*} ${v#h} ${#v}' nm	-	-	-
+arith	sh -c 'n=3; echo $((n * 2 + 1))' nm	-	-	-
+trap-exit	sh -c 'trap "echo trapped" EXIT; echo main' nm	-	-	-
+stderr-only	sh -c 'echo err >&2' nm	-	-	-
+read-loop	sh -c 'while read l; do echo "L:$l"; done' nm	a\nb\n	-	-
+default-value	sh -c 'x=default; echo ${UNSET:-$x}' nm	-	-	-
+dollar0	sh -c 'echo $0' nm	-	-	-
+echo-escape	sh -c 'echo "a\tb"' nm	-	-	-

@@ -1,0 +1,11 @@
+# sort differential cases — see tests/diff/README.md for the format.
+# fields: id<TAB>argv<TAB>stdin<TAB>env<TAB>hints
+basic	sort	b\na\nc\n	-	-
+uniq	sort -u	b\na\na\n	-	-
+numeric	sort -n	10\n2\n1\n	-	-
+reverse	sort -r	b\na\nc\n	-	-
+k2	sort -k2,2	x 2\nx 1\n	-	-
+stable-keys	sort -s -k1,1n -k2,2n	2 b\n1 a\n2 a\n	-	-
+version	sort -V	1.9\n1.10\n1.2\n	-	-
+t-k	sort -t: -k3n	b:x:10\nc:x:2\na:x:1\n	-	-
+check-n	sort -nc	1\n2\n3\n	-	-

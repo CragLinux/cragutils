@@ -6,6 +6,13 @@ booted in QEMU, driven non-interactively over ssh, so the diff harness
 can compare cragutils (and host GNU tools) against honest FreeBSD
 behavior rather than a re-implementation.
 
+This file is the single contract between the oracle and its consumers
+(`tests/diff/run-diff.sh`, `smoke.sh`, humans): provisioning and VM
+operations, the `run-on-freebsd.sh` invocation modes, and the canonical
+`crag-diff-run` frame.  The harness side is deliberately tolerant: if
+the oracle is absent it skips the `freebsd` backend, exit 77 skips, and
+an unparsable frame skips the case with a warning — never a DRIFT.
+
 ## Quick start
 
 ```sh
@@ -84,7 +91,9 @@ first boot), so `start`/`reset` prune the entry for
 (`StrictHostKeyChecking=accept-new`).  Everything ssh touches is
 per-oracle (dedicated key + known_hosts), nothing global.
 
-## Command execution (`run-on-freebsd.sh`)
+## Command execution (`run-on-freebsd.sh`) — two invocation modes
+
+### Mode 1: one shell command (human/legacy mode)
 
 ```
 ./run-on-freebsd.sh '<shell command>'    # exactly one argument
@@ -101,12 +110,76 @@ Execution contract (also echoed in every frame):
 * guest stdout and stderr are captured to separate temp files first, so
   they can never interleave.
 
-Output is a single **`crag-diff-run` frame** on stdout:
+Exit status of `run-on-freebsd.sh` itself in this mode: `0` = valid
+frame emitted, `2` = usage, `3` = ssh/transport failure or
+truncated/invalid frame (no frame emitted; diagnostics on stderr).  The
+guest's status lives only in the frame.
+
+Caveats: a command string may have one trailing newline appended before
+execution (shell-quoting artifact; trailing newlines are no-ops in
+`sh -c`, so stdout/stderr/exit are unaffected).  Commands must not
+leave background children holding stdout open (`sleep 100 &` would
+delay the frame until the child exits).
+
+### Mode 2: tool invocation with fixtures (harness mode)
+
+    run-on-freebsd.sh [--stdin FILE] [--tar FILE] [--tar-out FILE]
+                      [--timeout N] [--env VAR=VAL]... -- TOOL [ARG...]
+
+Selected when the arguments are flag-shaped (`--stdin`, `--tar`,
+`--tar-out`, `--timeout`, `--env`, `--`); a single non-flag argument is
+mode 1.
+
+* `--stdin FILE` — the tool's stdin is exactly this file (default
+  `/dev/null`).
+* `--tar FILE` — unpack this tar archive into a **fresh run directory**
+  on the guest (`$ORACLE_GUEST_RUNDIR`, default `/tmp/crag-diff-w`,
+  deleted and recreated per invocation) and run there; the tool's cwd
+  is that run directory.  The harness sends the case's working tree,
+  already mtime-pinned, as `tar -cf ... -C <workdir> .`.
+* `--tar-out FILE` — after the tool runs, fetch the post-run run
+  directory tree back as a tar (`tar -cf - -C <rundir> .`) into this
+  host file.  The harness uses it for `post:` side-effect observations,
+  so the observed tree is exactly what the tool left on the guest.  A
+  fetch failure fails the whole invocation.
+* `--timeout N` — bound the tool with the guest's `timeout(1)` (default
+  10 seconds); on timeout the frame's `exit_status` is `124` and the
+  stdout payload is truncated and run-to-run varying — consumers must
+  not compare timed-out runs (the harness skips them).
+* `--env VAR=VAL` — repeatable (values must not contain spaces); set
+  these variables in addition to the base environment.
+* `-- TOOL [ARG...]` — the tool name and arguments exactly as in the
+  case table, transported argv-faithful (each argument is
+  single-quoted for the guest shell and the tool is `exec`ed, so no
+  re-parsing of arguments happens).
+
+Execution contract in this mode:
+
+* runs as user `freebsd`, under `/bin/sh -c`, `exec`ing the tool,
+* **working directory `$ORACLE_GUEST_RUNDIR`** (stable path, fresh
+  contents per call),
+* **environment**: `LC_ALL=C LANG=C TZ=UTC HOME=<rundir>
+  PATH=/sbin:/bin:/usr/sbin:/usr/bin`, plus the `--env` deltas,
+* `umask 022`,
+* `--stdin FILE` is forwarded verbatim to the tool; stdout/stderr are
+  captured separately exactly as in mode 1.
+
+Exit status of the runner itself in this mode: `0` = valid frame
+produced (even if the tool failed — the tool's status is in the frame),
+`2` = usage error, `77` = the oracle is unavailable (VM not running,
+ssh/transport failure, or invalid/truncated frame; diagnostics on
+stderr).  Consumers treat `77` as "skip this backend": in particular
+`tests/diff/run-diff.sh` skips the case and can never turn it into a
+DRIFT verdict.
+
+## The canonical frame (`crag-diff-run`, version 1)
+
+Both modes emit exactly one frame on stdout:
 
 ```
 crag-diff-run: 1
-cwd: /home/freebsd
-lc_all: C
+cwd: /home/freebsd              <- mode 1: ORACLE_GUEST_CWD
+lc_all: C                          mode 2: the guest run directory
 exit_status: <decimal>          <- the GUEST's exit status
 stdout_bytes: <decimal>
 stderr_bytes: <decimal>
@@ -122,16 +195,13 @@ frame certifies the command ran to completion (a command exiting 255
 can never be confused with an ssh failure).  Binary payloads are safe
 (verified in smoke.sh: `printf 'a\000b'` arrives as 3 bytes).
 
-Exit status of `run-on-freebsd.sh` itself: `0` = valid frame emitted,
-`2` = usage, `3` = ssh/transport failure or truncated/invalid frame
-(no frame emitted; diagnostics on stderr).  The guest's status lives
-only in the frame.
-
-Caveats: a command string may have one trailing newline appended before
-execution (shell-quoting artifact; trailing newlines are no-ops in
-`sh -c`, so stdout/stderr/exit are unaffected).  Commands must not
-leave background children holding stdout open (`sleep 100 &` would
-delay the frame until the child exits).
+`tests/diff/run-diff.sh`'s `oracle_unframe` parses exactly this frame
+and additionally tolerates minor legacy spellings of the magic
+(`CRAG-ORACLE 1`, `crag-oracle-v1`) and of the three counted fields
+(`exit N`/`exit: N`/`status: N`, `stdout-bytes:`/`stdout-len:`/`stdout:`,
+`stderr-bytes:`/`stderr-len:`/`stderr:`), but new producers must emit
+the `crag-diff-run: 1` frame above.  **One format, one parser, one
+producer — this frame is the contract.**
 
 ## Smoke proof (2026-11-08, evidence/)
 
@@ -186,6 +256,8 @@ NUL-safe binary payloads (3 bytes, hexdumped).
   and 17.03 s totals), vs **594 ms / 562 ms for a bare `ssh true`**
   round trip — i.e. ~285 ms of framing/validation on top of the
   TCG-guest ssh round trip.  On a KVM host both numbers drop sharply.
+  Mode 2 costs up to two extra round trips per call (tar upload, tar
+  fetch).
 * `vm.sh stop`: graceful ACPI powerdown observed at **14 s**; the
   escalation path (SIGTERM/SIGKILL) exists but has not been needed.
 
@@ -194,6 +266,15 @@ overlay from the read-only base + boot.  Every observable guest state
 (hostname, users, host keys, package state, files in /tmp) returns to
 the official first-boot state.  `provision.sh` needs re-running only if
 `$ORACLE_HOME` is deleted or the pinned image changes.
+
+## Notes for harness cases
+
+* Mode 2 keeps the guest run directory path stable
+  (`$ORACLE_GUEST_RUNDIR`), so `norm:workdir`-style path normalization
+  can target it; the tree fetched with `--tar-out` is what the harness
+  observes for `post:` hints.
+* Nothing in the contract requires root on the VM; cases are written to
+  be safe as any user.
 
 ## Known caveats
 

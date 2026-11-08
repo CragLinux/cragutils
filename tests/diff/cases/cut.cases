@@ -1,0 +1,9 @@
+# cut differential cases — see tests/diff/README.md for the format.
+# fields: id<TAB>argv<TAB>stdin<TAB>env<TAB>hints
+df1	cut -d. -f1	1.2.3\n10.20.30\n	-	-
+df2	cut -d: -f2	root:x:0:0\nbin:x:1:1\n	-	-
+f3-	cut -f3-	a\tb\tc\td\n	-	-
+c1-16	cut -c1-16	0123456789abcdefghijABCDEFGHIJ\n	-	-
+c2	cut -c2	abc\ndef\n	-	-
+oob	cut -d: -f5	a:b\n	-	-
+s-delim	cut -s -d: -f1	a:b\nnodelim\n	-	-
