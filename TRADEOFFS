@@ -80,9 +80,13 @@ from the corpus work:
     extension over stock FreeBSD.
   - `date -f FMT STRING` *without* -j sets the clock from the parsed
     string (it fails with "clock_settime: Operation not permitted" when
-    unprivileged, but succeeds as root).  The probe in firstboot.sh
-    (`date -u -f %s "$floor"`) therefore sets the system time as a side
-    effect when run as root; use -j for display-only parsing.
+    unprivileged, but succeeds as root).  firstboot.sh uses exactly
+    this on purpose: when the clock has fallen behind the build-time
+    floor it steps the clock forward (`date -u -f %s "$floor"`), and
+    the call is guarded (only when now < floor), forward-only, and
+    logged.  Do NOT add -j there — it would silently disable the step
+    while the message still claims the clock was stepped.  Display-only
+    callers are the ones that need -j.
 
 
 find(1) has no -newermt
