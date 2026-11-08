@@ -256,3 +256,36 @@ jobs:
 
       - name: gcc -fanalyzer + scan-build against baseline
         run: sh ci/jobs/static.sh
+
+  diff:
+    name: differential corpus (vs GNU)
+    runs-on: ubuntu-latest
+    container:
+      image: registry.fedoraproject.org/fedora:latest
+    steps:
+      - name: dependencies
+        run: |
+          dnf -y install --setopt=install_weak_deps=False \
+            gcc gcc-c++ meson ninja-build \
+            pkgconf-pkg-config flex byacc bison libxo-devel \
+            ncurses-devel libedit-devel openssl-devel zlib-devel \
+            bzip2-devel xz-devel libzstd-devel libacl-devel \
+            libselinux-devel binutils file diffutils git which
+
+      - uses: actions/checkout@v4
+
+      # DRIFT — the only gate-failing verdict — is defined by the
+      # cragutils-vs-FreeBSD comparison; the FreeBSD VM oracle is not
+      # available in CI yet, so until it lands this runs cragutils-vs-GNU
+      # and gates on the harness and report generation themselves.  See
+      # ci/jobs/diff.sh for how DRIFT gating activates.
+      - name: differential corpus
+        run: sh ci/jobs/diff.sh
+
+      - name: upload diff reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diff-reports
+          path: build/state/test-results/diff.*
+          if-no-files-found: ignore

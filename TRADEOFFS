@@ -56,3 +56,97 @@ in the FreeBSD source tree (we should look for those), but the
 commands themselves don't output text in other languages.  However,
 text manipulation commands and things like ls(1) do work with UTF-8
 encodings and wide characters.
+
+
+date(1) option semantics
+------------------------
+
+The date(1) in cragutils keeps the FreeBSD options, and they differ
+fundamentally from GNU date's (tests/diff cases date/r-epoch,
+date/f-parse, date/jur, date/jf-format):
+
+    -r EPOCH    print the time from seconds-since-epoch (GNU: -r is a
+                reference FILE)
+    -j -f FMT   parse and display without setting the clock (GNU has
+                no -j; -f means input FILE)
+    -jur EPOCH  shorthand for the same (GNU: invalid options)
+
+GNU spellings like `date -d @1000000000` do not exist here; scripts
+ported from GNU environments must switch to the BSD forms.  Two notes
+from the corpus work:
+
+  - cragutils date -r also accepts a file name and then prints from its
+    mtime (case date/r-file matches GNU exactly) — a compatibility
+    extension over stock FreeBSD.
+  - `date -f FMT STRING` *without* -j sets the clock from the parsed
+    string (it fails with "clock_settime: Operation not permitted" when
+    unprivileged, but succeeds as root).  The probe in firstboot.sh
+    (`date -u -f %s "$floor"`) therefore sets the system time as a side
+    effect when run as root; use -j for display-only parsing.
+
+
+find(1) has no -newermt
+-----------------------
+
+GNU find's `-newermt ABSOLUTE-TIME` is not supported; the tool rejects
+it with an error and exit 1 (case find/newermt) where GNU lists the
+matching paths.  FreeBSD find's spelling is the -newerXY family.  Note
+that the initramfs-tools portability patch in cports
+(0005-general-portability-fixes-for-bsdutils-and-musl.patch) invokes
+`find -newermt`, which fails against this find(1).
+
+
+patch(1) progress reporting and failure handling
+------------------------------------------------
+
+Happy-path application, dry runs, reverse application and the
+"previously applied" case behave identically to GNU patch — same exit
+status and same resulting files (cases patch/p1-apply, patch/p1-dryrun,
+patch/p1-reverse, patch/p1-already, patch/ctx-p0).  The stdout wording
+differs ("Hmm... Looks like a unified diff to me... / Patching file X
+using Plan A..." vs. GNU's "patching file X") which the harness flags
+as a divergence; scripts must not parse patch(1) output.
+
+On a patch that goes bad partway through (case patch/bad-hunk) the
+behavior differs materially: cragutils applies the good hunks, keeps
+the file partially patched, writes .orig and .rej files and reports on
+stdout with exit 1; GNU patch aborts on the malformed hunk, leaves the
+file unmodified with no rejects, reports on stderr and exits 2.  Build
+automation that relies on "a failed patch leaves the tree untouched"
+(as GNU guarantees) must instead check for .rej files or probe with
+--dry-run first (build/lib/kernel.sh already probes with --dry-run).
+
+
+sed -i requires an extension argument
+-------------------------------------
+
+BSD sed's -i takes the backup extension as its argument; GNU-style
+`sed -i 's/.../.../' file` (case sed/i-inplace) does not edit the file
+and exits 1 where GNU edits in place and exits 0.  Use the attached
+extension form `sed -i.bak ...` (case sed/i-suffix — identical to
+GNU).  The image hooks 10-create-users.sh and 35-dev-console-login.sh
+use the GNU spelling; they run in the GNU build container today and
+would silently stop editing if run against the target userland.
+
+
+sh echo does not interpret backslash escapes
+--------------------------------------------
+
+The echo builtin of cragutils sh prints `a\tb` literally (case
+sh/echo-escape) where dash's echo expands the escape to a tab.  Use
+printf(1) when escapes are wanted; note the direction: the permissive
+behavior is dash's, so scripts relying on it break on the target.
+
+
+stat(1) is BSD stat, not GNU coreutils stat
+-------------------------------------------
+
+`stat -c FORMAT` is a GNU-ism: cragutils rejects it with exit 1 (cases
+stat/c-perm, stat/c-size) where GNU prints the mode/size.  Conversely
+`stat -f FORMAT` is the BSD format string (cases stat/f-perm,
+stat/f-size, stat/basic, stat/f-name all print the requested fields)
+where GNU's -f reports file-system information.  The Crag image hooks
+use `stat -c %a` (05-platform-users.sh, 10-create-users.sh,
+35-dev-console-login.sh); those run in the GNU build container, but
+target-side scripts must use BSD formats (as the cports bubblewrap
+tests patch already does with `stat -f '%OLp'`).

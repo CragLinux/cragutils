@@ -1,0 +1,10 @@
+# awk differential cases — see tests/diff/README.md for the format.
+# fields: id<TAB>argv<TAB>stdin<TAB>env<TAB>hints
+print1	awk '{print $1}'	a b c\n	-	-
+fs-v-hit	awk -F: -v u=5 '$3==u {found=1} END {exit found?0:1}'	root:x:0:0\ntest:x:5:5\n	-	-
+fs-v-miss	awk -F: -v u=99 '$3==u {found=1} END {exit found?0:1}'	root:x:0:0\n	-	-
+dedup	awk 'NF && !seen[$0]++'	a\na\n\nb\n	-	-
+ofs-edit	awk -F: -v u=u9 'BEGIN{OFS=":"} $1=="crag-api"{$4=($4==""?u:$4","u)} {print}'	crag-api:x:98:\nroot:x:0:0\n	-	-
+printf	awk '{printf "%03d\n", $1}'	7\n42\n	-	-
+split-member	awk -F: '$1=="crag-api"{n=split($4,a,","); for(i=1;i<=n;i++) if(a[i]=="u1") exit 0; exit 1}'	crag-api:x:98:u1,u2\n	-	-
+substr	awk '{print substr($1,2,3)}'	abcdef\n	-	-

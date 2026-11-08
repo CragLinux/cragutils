@@ -1,0 +1,12 @@
+--- a/src/hello.c
++++ b/src/hello.c
+@@ -1,4 +1,4 @@
+ int main(void)
+ {
+-    return 0;
++    return 1;
+ }
+@@ -50,3 +50,3 @@ garbage
+ nope
+ nada
+ zilch

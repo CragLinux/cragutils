@@ -1,0 +1,10 @@
+# find differential cases — see tests/diff/README.md for the format.
+# fields: id<TAB>argv<TAB>stdin<TAB>env<TAB>hints
+name	find . -name '*.txt'	-	-	norm:sortlines
+type-f	find . -type f	-	-	norm:sortlines
+maxdepth	find . -maxdepth 1 -name '*.txt'	-	-	norm:sortlines
+not-name	find . -type f -not -name '*.txt'	-	-	norm:sortlines
+exec-ls	find . -name '*.txt' -exec ls {} \;	-	-	norm:sortlines
+newermt	find . -newermt '@1000000000'	-	-	norm:sortlines
+L-type	find -L . -type f	-	-	norm:sortlines
+print0	find . -name '*.txt' -print0	-	-	norm:sortlines

@@ -1,0 +1,8 @@
+# jot differential cases — see tests/diff/README.md for the format.
+# fields: id<TAB>argv<TAB>stdin<TAB>env<TAB>hints
+basic	jot 5	-	-	-
+range	jot 5 10 14	-	-	-
+step	jot 3 1 5 2	-	-	-
+sep	jot -s , 3	-	-	-
+width	jot -w %03d 3 1	-	-	-
+zero	jot 0	-	-	-

@@ -1,0 +1,9 @@
+# date differential cases — see tests/diff/README.md for the format.
+# fields: id<TAB>argv<TAB>stdin<TAB>env<TAB>hints
+epoch-now	date +%s	-	-	norm:epoch
+r-epoch	date -u -r 1000000000 +%Y-%m-%d	-	-	-
+f-parse	date -u -j -f %s 1000000000 +%Y-%m-%dT%H:%M:%SZ	-	-	-
+jur	date -jur 1000000000	-	-	-
+jf-format	date -u -j -f '%Y-%m-%d %H:%M:%S' '2026-11-07 00:00:00' '+%s'	-	-	-
+bad-format	date -u -j -f %Q 1000000000	-	-	-
+r-file	date -u -r f +%Y	-	-	-
