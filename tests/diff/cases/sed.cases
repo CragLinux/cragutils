@@ -5,7 +5,7 @@ n-p	sed -n 's|^\([a-z]*\)-\([0-9]*\)$|\1 \2|p'	disk-3\npart-7\nnone\n	-	-
 i-inplace	sed -i 's/^root:[^:]*:/root::/' shadow	-	-	post:shadow
 i-suffix	sed -i.bak 's/hello/goodbye/' g	-	-	post:g,post:g.bak
 E-ext	sed -E 's/([0-9]+)/N/'	abc123def456\n	-	-
-q-ext	sed 's/^# \?//'	# heading\n	-	-
+q-ext	sed 's/^# \?//'	# heading\n	-	delta:GNU basic-regex
 delete	sed '2d'	a\nb\nc\n	-	-
 range	sed -n '/begin/,/end/p'	x\nbegin\ny\nend\nz\n	-	-
 last	sed '$s/x/y/'	x\nx\n	-	-

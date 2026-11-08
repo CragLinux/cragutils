@@ -4,5 +4,5 @@ p1-apply	patch -p1 -N	@p1.diff	-	post:src/hello.c
 p1-dryrun	patch -p1 -N --dry-run	@p1.diff	-	post:src/hello.c
 p1-reverse	patch -p1 -R -N	@p1.diff	-	post:src/hello.c
 p1-already	patch -p1 -N	@p1.diff	-	post:src/hello.c
-bad-hunk	patch -p1 -N	@bad.diff	-	post:src/hello.c
+bad-hunk	patch -p1 -N	@bad.diff	-	post:src/hello.c,delta:No such line
 ctx-p0	patch -p0 -N	@ctx.diff	-	post:f

@@ -17,6 +17,17 @@ if require "jot" jot; then
     assert_out "jot with explicit range" "5
 6" "$(tool jot)" 2 5
     assert_out "jot -w format" "x1" sh -c "$(tool jot) -w 'x%d' 1 1"
+    # A zero repetition count is infinity in BSD jot (reps == 0 sets
+    # infinity in jot.c); GNU seq 0 prints nothing.  Bound with head so
+    # the assert terminates.
+    assert_out "jot 0 counts to infinity" "1
+2
+3" sh -c "$(tool jot) 0 | head -3"
+    assert_out "jot zero range repeats zero" "0
+0
+0
+0
+0" "$(tool jot)" 5 0 0
 fi
 
 group "grep: pointer arithmetic before the allocation with -B 0"

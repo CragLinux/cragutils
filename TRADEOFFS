@@ -150,3 +150,26 @@ use `stat -c %a` (05-platform-users.sh, 10-create-users.sh,
 35-dev-console-login.sh); those run in the GNU build container, but
 target-side scripts must use BSD formats (as the cports bubblewrap
 tests patch already does with `stat -f '%OLp'`).
+
+
+jot(1) counts to infinity on a zero repetition count
+----------------------------------------------------
+
+`jot 0` is not "print nothing": BSD jot treats a zero repetition count
+as infinity and counts 1, 2, 3, ... forever (reps == 0 sets the
+infinity flag in jot.c), where GNU `seq 0` prints nothing.  The
+differential corpus deliberately has no `jot 0` case (unbounded output
+is not byte-comparable); tests/t/12-regress-tools.sh pins the infinity
+semantics with `jot 0 | head -3`.  Scripts that want a bounded count of
+zero items must test the count before invoking jot.
+
+
+sh(1) echo prints backslash escapes literally
+---------------------------------------------
+
+The FreeBSD shell's echo builtin does not interpret backslash escapes:
+`echo "a\tb"` prints the five characters a \ t b (case sh/echo-escape,
+identical in cragutils and the FreeBSD oracle), while dash's echo (the
+host's /usr/bin/sh) expands \t to a tab.  bash in POSIX mode agrees
+with the BSD behavior.  Do not rely on either expansion in portable
+scripts; use `printf '%s\n'` when the escapes must be interpreted.

@@ -5,4 +5,9 @@ range	jot 5 10 14	-	-	-
 step	jot 3 1 5 2	-	-	-
 sep	jot -s , 3	-	-	-
 width	jot -w %03d 3 1	-	-	-
-zero	jot 0	-	-	-
+# NB: `jot 0` is NOT "zero output": a zero repetition count means
+# infinity in BSD jot (it counts 1,2,3,... forever; GNU seq 0 prints
+# nothing).  That is unbounded by design and unpinned here; see the
+# regression assert in tests/t/12-regress-tools.sh.  The zero edge is
+# exercised with a bounded zero range instead.
+zero-range	jot 5 0 0	-	-	-

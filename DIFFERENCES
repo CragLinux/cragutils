@@ -711,3 +711,31 @@ in patch(1)'s pch.c pervasively rely on signed wraparound semantics; on
 overflow the behavior is undefined in C and trips UBSan.  Both files are
 compiled with -fwrapv (defined wraparound) in the meson and zig builds,
 and the hottest accumulation sites use unsigned arithmetic explicitly.
+
+
+regex(3) accepts GNU basic-regex extensions
+-------------------------------------------
+On Linux the pattern-matching tools (sed(1), grep(1), ...) pass their
+patterns to glibc regex(3), which accepts the GNU basic-regex
+extensions \?, \+ and \| (and \b) inside basic regular expressions.
+FreeBSD's regex(3) treats \? as a literal '?', so `sed 's/^# \?//'`
+strips "# " in cragutils but is a no-match on FreeBSD (differential
+case sed/q-ext).  We keep glibc regex(3) as-is - vendoring FreeBSD
+regex would change every pattern-matching tool at once - so scripts
+that use \?, \+ or \| to mean literal characters in a basic regex must
+escape them differently here.
+
+
+patch(1) "No such line N in input file, ignoring" is not printed
+----------------------------------------------------------------
+Upstream patch(1) prints this once per patch file as a side effect of
+hunk placement: the placement scan probes input lines outside the file,
+ifetch() reports them missing (inp.c) and the first probe prints the
+warning.  The locate_hunk() huge-line CPU-DoS fix (see
+SECURITY-FINDINGS.md) starts the scan at the first offset where the
+hunk fits inside the input file, so those probes never happen and the
+warning never triggers (differential case patch/bad-hunk).  The patch
+outcome is identical - same exit status, same partial application, same
+.orig/.rej files - only that informational line is gone.  Reproducing
+the line would mean replaying the probe order the fix removed, so the
+delta is declared here instead.
