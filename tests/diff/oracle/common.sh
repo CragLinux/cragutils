@@ -38,6 +38,9 @@ ORACLE_KNOWN_HOSTS="$ORACLE_HOME/known_hosts"
 ORACLE_SSH_PORT="${ORACLE_SSH_PORT:-2224}"  # fixed hostfwd port on 127.0.0.1
 ORACLE_SSH_USER="${ORACLE_SSH_USER:-freebsd}"
 ORACLE_GUEST_CWD="${ORACLE_GUEST_CWD:-/home/freebsd}"
+# run-on-freebsd.sh mode 2 (-- TOOL): the per-call fresh run directory
+# on the guest (stable path so path normalization can target it).
+ORACLE_GUEST_RUNDIR="${ORACLE_GUEST_RUNDIR:-/tmp/crag-diff-w}"
 ORACLE_MEM="${ORACLE_MEM:-2048}"
 ORACLE_SMP="${ORACLE_SMP:-2}"
 ORACLE_ACCEL="${ORACLE_ACCEL:-tcg}"         # this host has no /dev/kvm

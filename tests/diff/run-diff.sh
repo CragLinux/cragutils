@@ -53,6 +53,11 @@
 
 set -u
 
+# Deterministic C locale for the harness itself (byte-exact parsing of
+# oracle frames, stable sorting); tool runs set their own environment.
+LC_ALL=C
+export LC_ALL
+
 srcdir=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 diffdir=$srcdir/tests/diff
 cases_dir=$diffdir/cases
@@ -108,7 +113,12 @@ mkdir -p "$work_root"
 cleanup() {
     [ "$keep_work" = "1" ] || rm -rf "$work_root"
 }
-trap cleanup EXIT INT TERM
+# EXIT runs cleanup exactly once; INT/TERM must actually terminate (a
+# trap handler that returns resumes execution - that is how a TERM once
+# deleted the work tree under a still-running corpus).
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 cu_bin=
 if [ -n "$bindir" ]; then
@@ -299,6 +309,7 @@ run_backend() {
     fi
 
     : > "$_rd/obs"
+    _wd=$_rd/w
     if [ "$_be" = freebsd ]; then
         _oe=""
         if [ "$d_env" != "-" ]; then
@@ -308,15 +319,27 @@ run_backend() {
             done
             IFS=$old_ifs
         fi
+        # The guest runs in $ORACLE_GUEST_RUNDIR (stable path); that is
+        # the string norm:workdir must normalize in tool output.
+        _wd=${ORACLE_GUEST_RUNDIR:-/tmp/crag-diff-w}
         # shellcheck disable=SC2086
         tar -cf "$work_root/tree-$d_id.tar" -C "$_rd/w" . 2>/dev/null || true
+        _oto=
+        if command -v timeout >/dev/null 2>&1; then
+            # Backstop against transport hangs; the oracle itself bounds
+            # the guest tool with --timeout.
+            _oto="timeout $((timeout_s + 60))"
+        fi
+        # shellcheck disable=SC2086
         ( cd "$_rd/w" && eval "set -- $d_argv" &&
           { case ${1:-} in "$_tool") shift ;; esac; } &&
-          "$oracle" --stdin "$_sf" --tar "$work_root/tree-$d_id.tar" \
+          $_oto "$oracle" --stdin "$_sf" --tar "$work_root/tree-$d_id.tar" \
+              --tar-out "$work_root/tree-back-$d_id.tar" \
+              --timeout "$timeout_s" \
               $_oe -- "$_tool" "$@" ) \
             > "$_rd/frame" 2> "$_rd/runner-err"
         _fr=$?
-        if [ "$_fr" -eq 77 ]; then
+        if [ "$_fr" -eq 77 ] || [ "$_fr" -eq 124 ]; then
             rm -rf "$_rd"
             return 1
         fi
@@ -326,6 +349,21 @@ run_backend() {
             rm -rf "$_rd"
             return 1
         fi
+        # A timed-out tool (exit 124 from timeout(1)) produced truncated,
+        # run-to-run varying output - uncomparable, skip instead of judge.
+        if [ "$(cat "$_rd/exit" 2>/dev/null)" = 124 ]; then
+            rm -rf "$_rd"
+            return 1
+        fi
+        # Bring back the post-run guest tree so post: observations see
+        # the tool's real side effects, exactly as for local backends.
+        if [ -s "$work_root/tree-back-$d_id.tar" ]; then
+            rm -rf "$_rd/w"
+            mkdir -p "$_rd/w"
+            tar -xf "$work_root/tree-back-$d_id.tar" -C "$_rd/w" \
+                2>/dev/null || true
+        fi
+        rm -f "$work_root/tree-back-$d_id.tar"
     else
         _tp_save=$_tp
         (
@@ -351,37 +389,55 @@ run_backend() {
     fi
 
     post_obs "$_rd"
-    normalize "$_rd/out" "$_rd/w" "$_tp"
+    normalize "$_rd/out" "$_wd" "$_tp"
     return 0
 }
 
 # oracle_unframe <rundir> — parse the oracle's framed record into
-# exit/out/err files.  The frame contract is documented in
-# tests/diff/oracle/README.md.  Returns 1 on a malformed record.
+# exit/out/err files.  The canonical frame ("crag-diff-run: 1",
+# header lines up to an empty line, then exact payloads) is documented
+# in tests/diff/oracle/README.md; legacy magic/field spellings are
+# tolerated where harmless.  Returns 1 on a malformed record.
 oracle_unframe() {
     _rd=$1
     _f=$_rd/frame
     [ -f "$_f" ] || return 1
-    _off=1
-    _line=$(dd if="$_f" bs=1 count=200 2>/dev/null | sed -n 1p)
+    _off=0
+    _line=$(dd if="$_f" bs=1 skip="$_off" count=200 2>/dev/null | sed -n 1p)
     case $_line in
-        'CRAG-ORACLE 1'|'crag-oracle-v1'|CRAG-ORACLE*) : ;;
+        'crag-diff-run: 1'|'CRAG-ORACLE 1'|'crag-oracle-v1'|'CRAG-ORACLE'*) : ;;
         *) return 1 ;;
     esac
     _off=$((_off + ${#_line} + 1))
 
     _exit=; _slen=; _elen=
-    for _i in 1 2 3; do
+    while :; do
         _line=$(dd if="$_f" bs=1 skip="$_off" count=200 2>/dev/null | sed -n 1p)
-        _off=$((_off + ${#_line} + 1))
         case $_line in
-            exit:*|exit\ *|status:*)        _exit=${_line#*:}; _exit=${_exit# } ;;
-            stdout-bytes:*|stdout-len:*|stdout:*)
-                _slen=${_line#*:}; _slen=${_slen# } ;;
-            stderr-bytes:*|stderr-len:*|stderr:*)
-                _elen=${_line#*:}; _elen=${_elen# } ;;
-            *) return 1 ;;
+            '')
+                # empty line = canonical header terminator (or EOF)
+                _off=$((_off + 1))
+                break ;;
+            cwd:*|lc_all:*)  : ;;  # informational header lines
+            exit_status:*)   _exit=${_line#exit_status:} ;;
+            exit:*)          _exit=${_line#exit:} ;;
+            exit\ *)         _exit=${_line#exit } ;;
+            status:*)        _exit=${_line#status:} ;;
+            stdout_bytes:*)  _slen=${_line#stdout_bytes:} ;;
+            stdout-bytes:*)  _slen=${_line#stdout-bytes:} ;;
+            stdout-len:*)    _slen=${_line#stdout-len:} ;;
+            stdout:*)        _slen=${_line#stdout:} ;;
+            stderr_bytes:*)  _elen=${_line#stderr_bytes:} ;;
+            stderr-bytes:*)  _elen=${_line#stderr-bytes:} ;;
+            stderr-len:*)    _elen=${_line#stderr-len:} ;;
+            stderr:*)        _elen=${_line#stderr:} ;;
+            *)
+                # not a header line: the payload starts here (tolerated
+                # legacy frames without an empty-line separator)
+                break ;;
         esac
+        _exit=${_exit# }; _slen=${_slen# }; _elen=${_elen# }
+        _off=$((_off + ${#_line} + 1))
     done
     case $_exit in ''|*[!0-9]*) return 1 ;; esac
     case $_slen in ''|*[!0-9]*) return 1 ;; esac
