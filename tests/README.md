@@ -1,4 +1,4 @@
-# chimerautils test suite
+# cragutils test suite
 
 Functional and security regression tests. Portable POSIX sh — it runs
 under dash, busybox ash (Alpine/musl) and bash, and needs nothing beyond

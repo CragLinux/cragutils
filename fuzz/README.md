@@ -1,4 +1,4 @@
-# Fuzzing chimerautils parsers
+# Fuzzing cragutils parsers
 
 libFuzzer harnesses for code paths that consume untrusted input.
 
