@@ -1,4 +1,4 @@
-# tests/lib.sh — assertion helpers for the chimerautils functional suite.
+# tests/lib.sh — assertion helpers for the cragutils functional suite.
 #
 # Sourced by every file in tests/t/.  Portable POSIX sh: must work under
 # dash, busybox ash (Alpine/musl CI) and bash.  No bashisms, no GNU-only

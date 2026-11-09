@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# run-tests.sh — chimerautils functional and security regression suite.
+# run-tests.sh — cragutils functional and security regression suite.
 #
 # Runs against any set of built binaries: a meson build directory (whose
 # tools live in per-tool subdirectories), a flat directory such as
@@ -84,7 +84,7 @@ if [ -z "$bindir" ] && [ -z "$build" ]; then
     fi
 fi
 
-work_root=${CU_WORK_ROOT:-$(mktemp -d "${TMPDIR:-/tmp}/chimerautils-tests.XXXXXX")}
+work_root=${CU_WORK_ROOT:-$(mktemp -d "${TMPDIR:-/tmp}/cragutils-tests.XXXXXX")}
 keep_work=${CU_KEEP_WORK:-0}
 mkdir -p "$work_root"
 
@@ -171,7 +171,7 @@ fi
 # Run the test files
 # ---------------------------------------------------------------------
 
-printf 'chimerautils test suite\n'
+printf 'cragutils test suite\n'
 printf '  tools:  %s (%s executables)\n' "${bindir:-$build}" "$ntools"
 printf '  work:   %s\n' "$work_root"
 

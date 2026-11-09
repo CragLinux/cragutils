@@ -1,4 +1,4 @@
-// build.zig — zig build port of the chimerautils meson build.
+// build.zig — zig build port of the cragutils meson build.
 //
 // Data-driven: the per-tool inventory lives in build-data/targets.json
 // (extracted from the meson.build files). System dependency probes live in
@@ -158,7 +158,7 @@ pub fn build(b: *std.Build) !void {
 
     // ----- config-compat.h ---------------------------------------------
     const config_compat = b.addConfigHeader(.{ .include_path = "config-compat.h" }, .{
-        .PROJECT_NAME = "chimerautils",
+        .PROJECT_NAME = "cragutils",
         .PROJECT_VERSION = "15.1.0",
         .LIBEXECDIR = "/usr/local/libexec",
         .HAVE_STRTOQ = true,
@@ -166,7 +166,7 @@ pub fn build(b: *std.Build) !void {
 
     // src.custom tools include a plain "config.h" with name/version
     const custom_config = b.addConfigHeader(.{ .include_path = "config.h" }, .{
-        .PROJECT_NAME = "chimerautils",
+        .PROJECT_NAME = "cragutils",
         .PROJECT_VERSION = "15.1.0",
     });
 
@@ -273,7 +273,7 @@ pub fn build(b: *std.Build) !void {
     const shimtest = b.addExecutable(.{ .name = "shimtest", .root_module = shimtest_mod });
     b.installArtifact(shimtest);
 
-    // util_static (also compiled into the shared libchimerautils below)
+    // util_static (also compiled into the shared libcragutils below)
     const util_mod = mkModule(b, target, optimize, false);
     util_mod.addCSourceFiles(.{ .root = b.path("src.freebsd/util"), .files = &util_sources, .flags = gflags });
     util_mod.addIncludePath(b.path("include"));
@@ -281,14 +281,14 @@ pub fn build(b: *std.Build) !void {
     util_mod.addConfigHeader(config_compat);
     const libutil = b.addLibrary(.{ .name = "util_static", .linkage = .static, .root_module = util_mod });
 
-    // shared libchimerautils
-    const chimera_mod = mkModule(b, target, optimize, false);
-    chimera_mod.addCSourceFiles(.{ .root = b.path("src.freebsd/util"), .files = &util_sources, .flags = gflags });
-    chimera_mod.addIncludePath(b.path("include"));
-    chimera_mod.addIncludePath(b.path("src.freebsd/include"));
-    chimera_mod.addConfigHeader(config_compat);
-    const libchimera = b.addLibrary(.{ .name = "chimerautils", .linkage = .dynamic, .root_module = chimera_mod });
-    b.installArtifact(libchimera);
+    // shared libcragutils
+    const crag_mod = mkModule(b, target, optimize, false);
+    crag_mod.addCSourceFiles(.{ .root = b.path("src.freebsd/util"), .files = &util_sources, .flags = gflags });
+    crag_mod.addIncludePath(b.path("include"));
+    crag_mod.addIncludePath(b.path("src.freebsd/include"));
+    crag_mod.addConfigHeader(config_compat);
+    const libcrag = b.addLibrary(.{ .name = "cragutils", .linkage = .dynamic, .root_module = crag_mod });
+    b.installArtifact(libcrag);
 
     // dbcompat
     const db_flags = try std.mem.concat(arena, []const u8, &.{ gflags, &.{"-D__DBINTERFACE_PRIVATE"} });
@@ -598,7 +598,7 @@ pub fn build(b: *std.Build) !void {
     // non-executable targets and build-time-only tools, built above or skipped
     const skip_names = [_][]const u8{
         "compat",       "util_static", "dbcompat", "libmp",   "libfetch",
-        "chimerautils", "bltins_lib",  "maketab",  "mknodes", "mksyntax",
+        "cragutils", "bltins_lib",  "maketab",  "mknodes", "mksyntax",
     };
 
     outer: for (parsed.value.targets) |t| {

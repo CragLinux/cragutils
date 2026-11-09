@@ -50,7 +50,7 @@ option('chimera_realpath',
 
 option('install-lib',
     type: 'boolean', value: true,
-    description: 'Whether to install chimerautils library'
+    description: 'Whether to install cragutils library'
 )
 
 option('selinux',

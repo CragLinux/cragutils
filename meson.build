@@ -1,5 +1,5 @@
 project(
-    'chimerautils',
+    'cragutils',
     ['c', 'cpp'],
     version: '15.1.0',
     default_options: [

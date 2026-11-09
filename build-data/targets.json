@@ -1148,7 +1148,7 @@
    "sys_deps": []
   },
   {
-   "name": "chimerautils",
+   "name": "cragutils",
    "dir": "src.freebsd/util",
    "type": "shared_library",
    "link_with": [

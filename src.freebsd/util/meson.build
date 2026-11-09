@@ -34,7 +34,7 @@ libutil_static = static_library(
 instlib = get_option('install-lib')
 
 libutil = library(
-    'chimerautils',
+    'cragutils',
     version: '0',
     link_whole: [libutil_static],
     install: instlib,
@@ -47,10 +47,10 @@ if not cc.has_function('rpmatch') and instlib
     install_headers('../include/rpmatch.h')
     install_man('rpmatch.3')
     if lopt == 'shared' or lopt == 'both'
-        install_symlink('librpmatch.so', pointing_to: 'libchimerautils.so', install_dir: ldir)
+        install_symlink('librpmatch.so', pointing_to: 'libcragutils.so', install_dir: ldir)
     endif
     if opt == 'static' or lopt == 'both'
-        install_symlink('librpmatch.a', pointing_to: 'libchimerautils.a', install_dir: ldir)
+        install_symlink('librpmatch.a', pointing_to: 'libcragutils.a', install_dir: ldir)
     endif
 endif
 
@@ -58,10 +58,10 @@ if not cc.has_function('fts_open') and instlib
     install_headers('../include/fts.h')
     install_man('fts.3')
     if lopt == 'shared' or lopt == 'both'
-        install_symlink('libfts.so', pointing_to: 'libchimerautils.so', install_dir: ldir)
+        install_symlink('libfts.so', pointing_to: 'libcragutils.so', install_dir: ldir)
     endif
     if opt == 'static' or lopt == 'both'
-        install_symlink('libfts.a', pointing_to: 'libchimerautils.a', install_dir: ldir)
+        install_symlink('libfts.a', pointing_to: 'libcragutils.a', install_dir: ldir)
     endif
 endif
 
@@ -69,6 +69,6 @@ if instlib
     pkg = import('pkgconfig')
     pkg.generate(
         libutil,
-        description: 'chimerautils utility library',
+        description: 'cragutils utility library',
     )
 endif

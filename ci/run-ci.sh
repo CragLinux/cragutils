@@ -71,8 +71,8 @@ if [ "$use_container" = "1" ] && [ -z "$engine" ]; then
     fi
 fi
 
-img_fedora=chimerautils-ci-fedora
-img_alpine=chimerautils-ci-alpine
+img_fedora=cragutils-ci-fedora
+img_alpine=cragutils-ci-alpine
 
 build_image() {
     _name=$1; _file=$2
