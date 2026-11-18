@@ -394,6 +394,113 @@ EOF
     trap - EXIT
 fi
 
+group "fetch: FTP PWD/CWD buffer overruns"
+
+# FreeBSD 243ac45800de:
+# 1. ftp_pwd() decremented pwdlen past 0 (wrapping to SIZE_MAX) when a
+#    257 PWD reply filled pwd[PATH_MAX], bypassing `if (!pwdlen)` and
+#    writing a NUL one byte past the stack buffer, and accepted
+#    unterminated quoted pathnames.
+# 2. ftp_cwd() checked `file[i - 1] == '/'` before `file[i] == '/'` with
+#    `i == 0` when PWD returned `""`, reading one byte before url->doc.
+if require "fetch" fetch && have_host python3; then
+    mkdir -p fsrv
+    fport_long=$((21100 + ($$ % 500)))
+    fport_unterm=$((fport_long + 500))
+    fport_empty=$((fport_long + 1000))
+    cat > fsrv/ftpserver.py <<'EOF'
+import socket, sys, threading
+
+mode = sys.argv[1]
+port = int(sys.argv[2])
+srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+srv.bind(('127.0.0.1', port))
+srv.listen(4)
+
+def handle(conn):
+    f = conn.makefile('rwb', buffering=0)
+    f.write(b'220 mock ftp\r\n')
+    dsock = None
+    while True:
+        line = f.readline()
+        if not line:
+            break
+        cmd = line.decode('latin1').strip().split(' ', 1)[0].upper()
+        if cmd == 'USER':
+            f.write(b'230 ok\r\n')
+        elif cmd == 'PWD':
+            if mode == 'overlong':
+                f.write(b'257 "' + (b'a' * 5000) + b'"\r\n')
+            elif mode == 'unterm':
+                f.write(b'257 "/unterminated\r\n')
+            else:
+                f.write(b'257 ""\r\n')
+        elif cmd in ('CWD', 'CDUP'):
+            f.write(b'250 ok\r\n')
+        elif cmd == 'SIZE':
+            f.write(b'213 5\r\n')
+        elif cmd == 'MDTM':
+            f.write(b'213 20261117000000\r\n')
+        elif cmd in ('MODE', 'TYPE', 'NOOP'):
+            f.write(b'200 ok\r\n')
+        elif cmd == 'PASV':
+            dsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            dsock.bind(('127.0.0.1', 0))
+            dsock.listen(1)
+            dp = dsock.getsockname()[1]
+            f.write(f'227 Entering Passive Mode (127,0,0,1,{dp >> 8},{dp & 255})\r\n'.encode())
+        elif cmd == 'RETR':
+            f.write(b'150 opening\r\n')
+            dc, _ = dsock.accept()
+            dc.sendall(b'ftpok')
+            dc.close()
+            dsock.close()
+            dsock = None
+            f.write(b'226 done\r\n')
+        elif cmd == 'QUIT':
+            f.write(b'221 bye\r\n')
+            break
+        else:
+            f.write(b'500 unknown\r\n')
+    if dsock:
+        dsock.close()
+    conn.close()
+
+while True:
+    c, _ = srv.accept()
+    threading.Thread(target=handle, args=(c,), daemon=True).start()
+EOF
+    python3 fsrv/ftpserver.py overlong "$fport_long" &
+    fp1=$!
+    python3 fsrv/ftpserver.py unterm "$fport_unterm" &
+    fp2=$!
+    python3 fsrv/ftpserver.py empty "$fport_empty" &
+    fp3=$!
+    trap 'kill $fp1 $fp2 $fp3 2>/dev/null' EXIT
+    sleep 1
+
+    assert_no_crash "fetch survives overlong FTP PWD (> PATH_MAX)" \
+        "$(tool fetch)" -q -s "ftp://127.0.0.1:$fport_long/dir/file"
+    assert_status "overlong FTP PWD rejected as protocol error" 1 \
+        "$(tool fetch)" -q -s "ftp://127.0.0.1:$fport_long/dir/file"
+
+    assert_no_crash "fetch survives unterminated FTP PWD" \
+        "$(tool fetch)" -q -s "ftp://127.0.0.1:$fport_unterm/dir/file"
+    assert_status "unterminated FTP PWD rejected as protocol error" 1 \
+        "$(tool fetch)" -q -s "ftp://127.0.0.1:$fport_unterm/dir/file"
+
+    assert_out "fetch -s handles empty FTP PWD without OOB under-read" "5" \
+        "$(tool fetch)" -q -s "ftp://127.0.0.1:$fport_empty/dir/file"
+    assert_ok "fetch transfers over empty FTP PWD" \
+        env CRAGUTILS_SANDBOX=NONE "$(tool fetch)" -q -o ftp.out \
+        "ftp://127.0.0.1:$fport_empty/dir/file"
+    assert_out "FTP body intact" "ftpok" "$(tool cat)" ftp.out
+
+    kill $fp1 $fp2 $fp3 2>/dev/null
+    trap - EXIT
+fi
+
 group "cut: b_n_cut getline/free of an advanced pointer"
 
 # b_n_cut() (cut -b -n in a multibyte locale) walked each line with
