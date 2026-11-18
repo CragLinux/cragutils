@@ -186,5 +186,7 @@ assert_no_crash "deep command nesting" \
     sh -c "$SH -c 'a=1; b=\$((a+1)); c=\$((b+1)); echo \$((a+b+c)) >/dev/null'"
 assert_no_crash "long pipeline" \
     sh -c "$SH -c 'echo x | cat | cat | cat | cat | cat >/dev/null'"
+sh_out "getopts leading : is not matched as an option character" "?::" \
+    'getopts ":a" opt -:; echo "$opt:$OPTARG"'
 
 cu_finish
